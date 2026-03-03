@@ -99,7 +99,7 @@
 
 <script>
     //Secret DATA
-    const ENCRYPTED_DATA = "U2FsdGVkX1+aDSmKphb08HQkynQm8JoJgCDkR5STKH0zkFxhCSl7EiasSRWjBwksjdBeMwMOTcDXrwqXkFY8/2R0yCoEbkiMmffxTjC7zFiLzQqxJ0RW2jM6ftssWjslH4FSmjDWHXvaPP5IsrI1L9a8+OBJatXRBrcYCiDm4RL2E580CBzont+gJjRY2L/mjgWqH9WoM1pba/OYh34x1gSyuKhItxYhCu09uPhVZ3J9y2U08nnrja/UJlhvvOxRiOEG6qNJZNR3LuIJVw6AivleNn4JpogsHrfRZi6q0ntgtYEh8tFT/tyyQp36DcWzUGcGBaKViWct0V82zvDy65UMs6EJ4zb/l7905iZ+JostQgUvaBbi+B2tFcSNOUvE0grmYLrC88sCzrvOvNMG1E3uxaTKrN/CHK7pH1lvVDxtIia1d5oi2iJc8yT8GoezXqpzXlKnX+V6H70lHyDPL2poZ3OktQ8KEUUHKbXxd5/NvhUU5iHhEQ+vnfViZ8zg+5RyGmWE74Mq56DUTLS0S6tX+oVyA9CerLoLQalYgglKUAHE+4CLwXJhBURt9qcd3JDNG9nBSgFtzKvDrXDzfK19onwonC60DD1hYP7nWdH3zl6VPMd/1AQe7b57Wi1Nbgmgvs7JPrQsqdhTg6mWMldbNHNxIS2ciNMPY966P72U2E73drGjuhEkvy+HJPuUSNeAnL3uOuOVBc/AmhEIP9NyTzgbVCHNQCjSJ7eiBbJ6e5EbNsJ5j56w9VG/0fb3PYSuoAKK/PrZzFrDnzGZPv2wyN3sQukHtiW1vQQZeEHmYTMWALp8ff8pYNmdOJ2rJAn/UefddZS4TsZV2q78HDpMPxeIq103MoTP/y+wA4frGxCep/qd0xFlsXi7iPNvF8iv/Cb/6jBTffRgo7UoWYayLVpfkQqwlSQfMPRLgcSTt3A2oXH6o9Clu4vvo/nQ1Li/pDTVVMd33SRHLosGhyg7H5QsealqJoPI0slvy2Yts5NFy0cvFEwvcTlMm8EwAObA+I30tZ0u766u2Jd0v42xe3GwbnDfoiEX1A/zXExe3anxjMzTax40L6sz2F8J0FxHSK3c0EgiZu32JbU8Bg=="; 
+    const ENCRYPTED_DATA = "U2FsdGVkX1+X+tn+CY9TqTzQyMtdQ3VN31xhMIFIqUGE8/5mxLK6ilxOEoKrWVjxkVLJ1ka+esHhFASEzI8ScBmb2OG23qe1CRSvjD6P6F60mT777aUmfZHbwh7J6Se5wGY8A62zrUnhZybJBc6afzEEoM+SpTJ8h1lUQUm2e6ziB6AXNsTYqUtfxoq4cOP3aHDmDM7TDhsASg+FB63rcKfPcOOtn52tnLCGT33zOykqNKK/s6B7TB0JTZagISYCSvB1y1mqHD1BmjighjIVc7mdCbVH6CrjqZrfwNNj+E09uU/GKBjCsSjfMxj1vV736tiE80Wn9IT6+OGZmvS6oFvHHkvTxsmOrjGCe6oqH/1XB31bvFdUE+bEdui1bu+ioEFeh05LWa+95q/hKiKmsxNPyol2HRwl1n4TehPJlyu5At/6wA6Z2Pv21l3nfcYZ3xo3on1qnlhwsMscZcQl0CnL9rwzNRqKB+DKEqARs+xLPzGa/i2v8FAe1LSTVkM+66G8YmaSfN8upxOjyLQXR0o/d74EtW2oVtCVm2WVlhci6PJGGtb6v84HzioitIZsC2kDbwwBA8bULWP5+80ACThqFXZ4boqxxa4NqbjeYuuouRBkxFyP/HtI+6CkjH4wXmZO6pv5+UgCXwXVRy44BIfRjbKbkvjpUs2+FHXILHeo8jSMaMS4ATxRshrj9Bz1VzUdnsDAmgV/nozAopWvGLcaBcNBj/7lWtzZKKcZM3UmLTY0pLY6n+jhOp49/6Y7UIf5OMg+fo73P2NSuzSgTOtLfyArouCmjltWfzDy307nUsScWOG3ym7tcwVCE51p6iPSuHqUe/EJViKZiOPBOPOqdXUJ+rW9dn05R3M/ngPDprnnaDo+KhBvWKoSoxv+8+rDpIhGHJzZfyS1ljX3TLvhVZF8rVxN+nOgZgCKI1Ylsa1DOFjk0jAcck7PhMjf1JhqTT6SRrHQXsOwL2Y2DZp3CpnnxMR6bYyA2zXtuleqJhCsmRymvOoMYkjaCrjJu0tWU4JM/JEaogoFREpTvcp3H587oPICAerpMy0tbS4iR6ByxKpklEQb+eeLzDTc4IqWlt799ybEaDCgwHZymg=="; 
 
 
     const IMAGE_POOL = [
@@ -213,58 +213,48 @@ function verifyAndUnlock() {
             return;
         }
 
-        // 3. 解密尝试 (这里是修改的重点)
         try {
-            // [关键] 检查加密库是否加载
+
             if (typeof CryptoJS === 'undefined') {
-                alert("❌ 严重错误：CryptoJS 库未加载！\n请确保 crypto-js.min.js 文件在同级目录下。");
+                alert("❌ 严重错误：CryptoJS 库未加载！");
                 return;
             }
 
-            // [关键] 自动去除首尾空格，防止复制粘贴错误
             const cleanEncryptedData = ENCRYPTED_DATA.trim(); 
 
-            // 尝试解密
             const bytes = CryptoJS.AES.decrypt(cleanEncryptedData, password);
             
-            // 将解密后的字节转为字符串
             const originalText = bytes.toString(CryptoJS.enc.Utf8);
             
-            // 调试：如果解密出空字符串，通常意味着密码错了
             if (!originalText) {
                 console.log("解密结果为空 (Empty Result)");
                 throw new Error("PASSWORD_INCORRECT");
             }
             
-            console.log("解密成功，得到的文本是:", originalText); // 按F12在控制台能看到
+            console.log("解密成功，得到的文本是:", originalText); 
 
-            // 尝试将字符串解析为 JSON 对象
             const data = JSON.parse(originalText); 
             
-            // 全部成功，跳转！
-            alert("✅ 验证成功！");
+            alert("✅ 验证成功！ \n【必读】 \n1. 先在左侧点击最新的（Latest）版本，或选择你需要的版本，确保链接出现后复制链接； \n2. 链接只允许在本网站查看/复制，只允许在代理软件中粘贴。不允许将本网站中的链接粘贴到 notion/备忘录/学习通/微信/QQ 等其他平台； \n3. 一键复制功能在手机上可能失效，如果无法一键复制就选择链接地址手动复制。");            
             showDashboard(data);
             
         } catch (e) {
-            console.error("详细错误信息:", e); // 在控制台打印报错
+            console.error("详细错误信息:", e); 
 
-            // 分类提示错误原因
             if (e.message === "PASSWORD_INCORRECT" || e.message === "Malformed UTF-8 data") {
                 alert("❌ 密码错误！\n无法解密数据，请检查密码。");
             } 
             else if (e instanceof SyntaxError) {
-                // 如果能走到这里，说明密码其实是对的（解密出了文本），但那个文本不是合法的JSON
-                alert("⚠️ 密码可能是对的，但数据损坏！\n解密出来的不是有效的 JSON 格式。\n请重新在 admin.html 生成数据。");
+                alert("⚠️ 数据损坏，格式错误。");
             } 
             else {
-                // 其他未知错误
                 alert("❌ 发生未知错误:\n" + e.message);
             }
 
             msg.textContent = "解密失败";
             msg.style.visibility = 'visible';
             
-            // 失败后刷新验证码，防止暴力破解
+
             initCaptcha();
         }
     }
