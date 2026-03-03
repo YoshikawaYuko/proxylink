@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>访问验证</title>
+    <script src="./crypto-js.min.js"></script>
+    <style>
+        :root { --primary: #4a90e2; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        
+
+        .auth-container { background: white; padding: 0; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 360px; overflow: hidden; }
+        
+
+        .captcha-header { background: #1A73E8; color: white; padding: 20px; position: relative; }
+        .captcha-header h3 { margin: 0; font-size: 1.1rem; font-weight: 500; }
+        .captcha-header p { margin: 5px 0 0; font-size: 0.9rem; opacity: 0.9; }
+        .captcha-header strong { font-weight: 800; font-size: 1.4rem; display: block; margin-top: 5px; }
+        
+
+        .password-section { padding: 15px 20px 5px; border-bottom: 1px solid #eee; }
+        .password-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box; outline: none; transition: 0.3s; }
+        .password-input:focus { border-color: #1A73E8; }
+
+
+        .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 10px; }
+
+        
+        .grid-item { position: relative; cursor: pointer; aspect-ratio: 1; overflow: hidden; transition: transform 0.1s; }
+        .grid-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        
+
+        .grid-item.selected { box-shadow: inset 0 0 0 3px #1A73E8; }
+        .grid-item.selected::after {
+            content: '✓'; position: absolute; top: 5px; left: 5px; background: #1A73E8; color: white;
+            border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; 
+            align-items: center; justify-content: center; font-weight: bold;
+        }
+        .grid-item:active { transform: scale(0.95); }
+
+
+        .footer { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; }
+        .status-text { font-size: 12px; color: #d32f2f; visibility: hidden; }
+        .verify-btn { background: #1A73E8; color: white; border: none; padding: 10px 24px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .verify-btn:hover { background: #1557b0; }
+        .verify-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        #dashboard { display: none; width: 90%; max-width: 800px; height: 80vh; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); flex-direction: column; overflow: hidden; }
+        .dash-header { padding: 20px; border-bottom: 1px solid #eee; font-weight: bold; font-size: 1.2rem; display: flex; justify-content: space-between; }
+        .dash-body { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 200px; background: #f8f9fa; border-right: 1px solid #eee; overflow-y: auto; }
+        .sidebar-item { padding: 15px; cursor: pointer; border-left: 3px solid transparent; font-size: 14px; }
+        .sidebar-item:hover { background: #e8f0fe; }
+        .sidebar-item.active { border-left-color: #1A73E8; background: #e8f0fe; color: #1A73E8; font-weight: bold; }
+        .content { flex: 1; padding: 30px; overflow-y: auto; }
+        .code-box { background: #f1f3f4; padding: 15px; border-radius: 4px; font-family: monospace; word-break: break-all; border: 1px solid #ddd; margin: 15px 0; color: #333; }
+        .copy-btn { padding: 8px 16px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+
+    <div class="auth-container" id="login-box">
+        <div class="captcha-header">
+            <h3>安全检查</h3>
+            <p>请选择所有包含</p>
+            <strong>黄前久美子</strong>
+            <p>的图片</p>
+        </div>
+        
+        <div class="password-section">
+            <input type="password" id="password-input" class="password-input" placeholder="输入访问密码（随时更新）">
+        </div>
+
+        <div class="grid-container" id="image-grid">
+        </div>
+
+        <div class="footer">
+            <span class="status-text" id="status-msg">验证失败，请重试</span>
+            <button class="verify-btn" onclick="verifyAndUnlock()">验证</button>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <div class="dash-header">
+            <span>链接管理</span>
+            <button onclick="location.reload()" style="border:none;background:none;cursor:pointer;">退出 Exit</button>
+        </div>
+        <div class="dash-body">
+            <div class="sidebar" id="sidebar"></div>
+            <div class="content">
+                <h3 id="sub-title">选择版本</h3>
+                <div class="code-box" id="sub-url">...</div>
+                <button class="copy-btn" onclick="copyText()">复制链接</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    //Secret DATA
+    const ENCRYPTED_DATA = "U2FsdGVkX1+aDSmKphb08HQkynQm8JoJgCDkR5STKH0zkFxhCSl7EiasSRWjBwksjdBeMwMOTcDXrwqXkFY8/2R0yCoEbkiMmffxTjC7zFiLzQqxJ0RW2jM6ftssWjslH4FSmjDWHXvaPP5IsrI1L9a8+OBJatXRBrcYCiDm4RL2E580CBzont+gJjRY2L/mjgWqH9WoM1pba/OYh34x1gSyuKhItxYhCu09uPhVZ3J9y2U08nnrja/UJlhvvOxRiOEG6qNJZNR3LuIJVw6AivleNn4JpogsHrfRZi6q0ntgtYEh8tFT/tyyQp36DcWzUGcGBaKViWct0V82zvDy65UMs6EJ4zb/l7905iZ+JostQgUvaBbi+B2tFcSNOUvE0grmYLrC88sCzrvOvNMG1E3uxaTKrN/CHK7pH1lvVDxtIia1d5oi2iJc8yT8GoezXqpzXlKnX+V6H70lHyDPL2poZ3OktQ8KEUUHKbXxd5/NvhUU5iHhEQ+vnfViZ8zg+5RyGmWE74Mq56DUTLS0S6tX+oVyA9CerLoLQalYgglKUAHE+4CLwXJhBURt9qcd3JDNG9nBSgFtzKvDrXDzfK19onwonC60DD1hYP7nWdH3zl6VPMd/1AQe7b57Wi1Nbgmgvs7JPrQsqdhTg6mWMldbNHNxIS2ciNMPY966P72U2E73drGjuhEkvy+HJPuUSNeAnL3uOuOVBc/AmhEIP9NyTzgbVCHNQCjSJ7eiBbJ6e5EbNsJ5j56w9VG/0fb3PYSuoAKK/PrZzFrDnzGZPv2wyN3sQukHtiW1vQQZeEHmYTMWALp8ff8pYNmdOJ2rJAn/UefddZS4TsZV2q78HDpMPxeIq103MoTP/y+wA4frGxCep/qd0xFlsXi7iPNvF8iv/Cb/6jBTffRgo7UoWYayLVpfkQqwlSQfMPRLgcSTt3A2oXH6o9Clu4vvo/nQ1Li/pDTVVMd33SRHLosGhyg7H5QsealqJoPI0slvy2Yts5NFy0cvFEwvcTlMm8EwAObA+I30tZ0u766u2Jd0v42xe3GwbnDfoiEX1A/zXExe3anxjMzTax40L6sz2F8J0FxHSK3c0EgiZu32JbU8Bg=="; 
+
+
+    const IMAGE_POOL = [
+
+        "049425121.jpg", "062375221.jpg", "068339212.jpg", "093897120.jpg", "127014122.jpg", "175112031.jpg", "198555202.jpg", "224078300.jpg", "226085023.jpg", "265629220.jpg", "300652323.jpg", "319391313.jpg", "326017123.jpg", "336839201.jpg", "365682133.jpg", "366512330.jpg", "381587302.jpg", "388679303.jpg", "444319112.jpg", "516266303.jpg", "516266323.jpg", "537651302.jpg", "551432203.jpg", "552460202.jpg", "566980030.jpg", "572528312.jpg", "580810303.jpg", "580810323.jpg", "584474022.jpg", "584474202.jpg", "590683220.jpg", "682464322.jpg", "735089012.jpg", "777075011.jpg", "783950313.jpg", "977279232.jpg"
+
+    ];
+    
+
+    const IMG_BASE_PATH = "./images/"; 
+
+    let currentSelection = new Set(); 
+    let currentRenderedImages = [];   
+    
+
+    window.onload = function() {
+        initCaptcha();
+    };
+
+    function isCorrectImage(filename) {
+        const namePart = filename.substring(0, filename.lastIndexOf('.'));
+        if (namePart.length < 2) return false;
+        const targetChar = namePart.charAt(namePart.length - 2);
+        return targetChar === '0';
+    }
+
+    function initCaptcha() {
+        const grid = document.getElementById('image-grid');
+        grid.innerHTML = '';
+        currentSelection.clear();
+        
+        const correctPool = IMAGE_POOL.filter(img => isCorrectImage(img));
+        const wrongPool = IMAGE_POOL.filter(img => !isCorrectImage(img));
+        
+        const correctCount = Math.floor(Math.random() * 3) + 4; // 4, 5, or 6
+        const wrongCount = 9 - correctCount; 
+
+
+        const selectedCorrect = shuffleArray(correctPool).slice(0, correctCount);
+        const selectedWrong = shuffleArray(wrongPool).slice(0, wrongCount);
+        
+
+        currentRenderedImages = shuffleArray([...selectedCorrect, ...selectedWrong]);
+        
+
+        currentRenderedImages.forEach((imgName, index) => {
+            const div = document.createElement('div');
+            div.className = 'grid-item';
+            div.onclick = () => toggleSelect(div, index);
+            
+            const img = document.createElement('img');
+            img.src = IMG_BASE_PATH + imgName;
+            div.appendChild(img);
+            grid.appendChild(div);
+        });
+
+
+        document.getElementById('status-msg').style.visibility = 'hidden';
+    }
+
+
+    function shuffleArray(array) {
+        let res = [...array];
+        for (let i = res.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [res[i], res[j]] = [res[j], res[i]];
+        }
+        return res;
+    }
+
+
+    function toggleSelect(element, index) {
+        if (currentSelection.has(index)) {
+            currentSelection.delete(index);
+            element.classList.remove('selected');
+        } else {
+            currentSelection.add(index);
+            element.classList.add('selected');
+        }
+    }
+
+
+function verifyAndUnlock() {
+        const passwordField = document.getElementById('password-input');
+        const password = passwordField.value;
+        const msg = document.getElementById('status-msg');
+        
+        // 1. 基础检查
+        if (!password) {
+            alert("❌ 请输入密码！");
+            return;
+        }
+
+        // 2. 图片验证逻辑 (保持不变)
+        let isCaptchaValid = true;
+        
+        // 检查选中的是否都是对的
+        currentSelection.forEach(index => {
+            if (!isCorrectImage(currentRenderedImages[index])) isCaptchaValid = false;
+        });
+        // 检查是否漏选了对的
+        currentRenderedImages.forEach((img, index) => {
+            if (isCorrectImage(img) && !currentSelection.has(index)) isCaptchaValid = false;
+        });
+
+        if (!isCaptchaValid) {
+            alert("❌ 图片验证失败！\n请检查是否选错了，或者漏选了。");
+            msg.textContent = "验证失败";
+            msg.style.visibility = 'visible';
+            setTimeout(initCaptcha, 1000); 
+            return;
+        }
+
+        // 3. 解密尝试 (这里是修改的重点)
+        try {
+            // [关键] 检查加密库是否加载
+            if (typeof CryptoJS === 'undefined') {
+                alert("❌ 严重错误：CryptoJS 库未加载！\n请确保 crypto-js.min.js 文件在同级目录下。");
+                return;
+            }
+
+            // [关键] 自动去除首尾空格，防止复制粘贴错误
+            const cleanEncryptedData = ENCRYPTED_DATA.trim(); 
+
+            // 尝试解密
+            const bytes = CryptoJS.AES.decrypt(cleanEncryptedData, password);
+            
+            // 将解密后的字节转为字符串
+            const originalText = bytes.toString(CryptoJS.enc.Utf8);
+            
+            // 调试：如果解密出空字符串，通常意味着密码错了
+            if (!originalText) {
+                console.log("解密结果为空 (Empty Result)");
+                throw new Error("PASSWORD_INCORRECT");
+            }
+            
+            console.log("解密成功，得到的文本是:", originalText); // 按F12在控制台能看到
+
+            // 尝试将字符串解析为 JSON 对象
+            const data = JSON.parse(originalText); 
+            
+            // 全部成功，跳转！
+            alert("✅ 验证成功！");
+            showDashboard(data);
+            
+        } catch (e) {
+            console.error("详细错误信息:", e); // 在控制台打印报错
+
+            // 分类提示错误原因
+            if (e.message === "PASSWORD_INCORRECT" || e.message === "Malformed UTF-8 data") {
+                alert("❌ 密码错误！\n无法解密数据，请检查密码。");
+            } 
+            else if (e instanceof SyntaxError) {
+                // 如果能走到这里，说明密码其实是对的（解密出了文本），但那个文本不是合法的JSON
+                alert("⚠️ 密码可能是对的，但数据损坏！\n解密出来的不是有效的 JSON 格式。\n请重新在 admin.html 生成数据。");
+            } 
+            else {
+                // 其他未知错误
+                alert("❌ 发生未知错误:\n" + e.message);
+            }
+
+            msg.textContent = "解密失败";
+            msg.style.visibility = 'visible';
+            
+            // 失败后刷新验证码，防止暴力破解
+            initCaptcha();
+        }
+    }
+
+
+    function showDashboard(data) {
+        document.getElementById('login-box').style.display = 'none';
+        const dash = document.getElementById('dashboard');
+        dash.style.display = 'flex';
+        
+        const sidebar = document.getElementById('sidebar');
+        data.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'sidebar-item';
+            div.textContent = item.title;
+            div.onclick = () => loadContent(item, div);
+            sidebar.appendChild(div);
+            if(idx===0) div.click();
+        });
+    }
+
+    function loadContent(item, elem) {
+        document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
+        elem.classList.add('active');
+        document.getElementById('sub-title').textContent = item.title;
+        document.getElementById('sub-url').textContent = item.url;
+    }
+
+    function copyText() {
+        const text = document.getElementById('sub-url').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            alert("已复制到剪贴板");
+        });
+    }
+</script>
+</body>
+</html>
