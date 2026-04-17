@@ -9,28 +9,22 @@
         :root { --primary: #4a90e2; --bg: #f0f2f5; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         
-
         .auth-container { background: white; padding: 0; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 360px; overflow: hidden; }
         
-
         .captcha-header { background: #1A73E8; color: white; padding: 20px; position: relative; }
         .captcha-header h3 { margin: 0; font-size: 1.1rem; font-weight: 500; }
         .captcha-header p { margin: 5px 0 0; font-size: 0.9rem; opacity: 0.9; }
         .captcha-header strong { font-weight: 800; font-size: 1.4rem; display: block; margin-top: 5px; }
         
-
         .password-section { padding: 15px 20px 5px; border-bottom: 1px solid #eee; }
         .password-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box; outline: none; transition: 0.3s; }
         .password-input:focus { border-color: #1A73E8; }
 
-
         .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 10px; }
-
         
         .grid-item { position: relative; cursor: pointer; aspect-ratio: 1; overflow: hidden; transition: transform 0.1s; }
         .grid-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
         
-
         .grid-item.selected { box-shadow: inset 0 0 0 3px #1A73E8; }
         .grid-item.selected::after {
             content: '✓'; position: absolute; top: 5px; left: 5px; background: #1A73E8; color: white;
@@ -38,7 +32,6 @@
             align-items: center; justify-content: center; font-weight: bold;
         }
         .grid-item:active { transform: scale(0.95); }
-
 
         .footer { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; }
         .status-text { font-size: 12px; color: #d32f2f; visibility: hidden; }
@@ -56,10 +49,47 @@
         .content { flex: 1; padding: 30px; overflow-y: auto; }
         .code-box { background: #f1f3f4; padding: 15px; border-radius: 4px; font-family: monospace; word-break: break-all; border: 1px solid #ddd; margin: 15px 0; color: #333; }
         .copy-btn { padding: 8px 16px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+
+        /* ======== 新增：跳转大按钮相关样式 ======== */
+        .extra-link-wrapper {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            background: #fafafa;
+        }
+        .extra-link-btn {
+            display: block;
+            width: 100%;
+            background: white;
+            color: #1A73E8;
+            border: 2px solid #1A73E8;
+            padding: 12px 0;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            transition: 0.3s;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+        .extra-link-btn:hover {
+            background: #1A73E8;
+            color: white;
+        }
+        /* 里层按钮特殊调整，使其在宽屏中居中等宽 */
+        .dash-footer-link {
+            background: white;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+        }
+        .dash-footer-link .extra-link-btn {
+            width: 50%;
+            min-width: 280px;
+        }
     </style>
 </head>
 <body>
-
 
     <div class="auth-container" id="login-box">
         <div class="captcha-header">
@@ -80,6 +110,10 @@
             <span class="status-text" id="status-msg">验证失败，请重试</span>
             <button class="verify-btn" onclick="verifyAndUnlock()">验证</button>
         </div>
+
+        <div class="extra-link-wrapper">
+            <a href="./directions.html" class="extra-link-btn">访问其他页面</a>
+        </div>
     </div>
 
     <div id="dashboard">
@@ -95,26 +129,25 @@
                 <button class="copy-btn" onclick="copyText()">复制链接</button>
             </div>
         </div>
+
+        <div class="extra-link-wrapper dash-footer-link">
+            <a href="./directions.html" class="extra-link-btn">访问其他页面</a>
+        </div>
     </div>
 
 <script>
     //Secret DATA
     const ENCRYPTED_DATA = "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";
 
-
     const IMAGE_POOL = [
-
         "049425121.jpg", "062375221.jpg", "068339212.jpg", "093897120.jpg", "127014122.jpg", "175112031.jpg", "198555202.jpg", "224078300.jpg", "226085023.jpg", "265629220.jpg", "300652323.jpg", "319391313.jpg", "326017123.jpg", "336839201.jpg", "365682133.jpg", "366512330.jpg", "381587302.jpg", "388679303.jpg", "444319112.jpg", "516266303.jpg", "516266323.jpg", "537651302.jpg", "551432203.jpg", "552460202.jpg", "566980030.jpg", "572528312.jpg", "580810303.jpg", "580810323.jpg", "584474022.jpg", "584474202.jpg", "590683220.jpg", "682464322.jpg", "735089012.jpg", "777075011.jpg", "783950313.jpg", "977279232.jpg"
-
     ];
     
-
     const IMG_BASE_PATH = "./images/"; 
 
     let currentSelection = new Set(); 
     let currentRenderedImages = [];   
     
-
     window.onload = function() {
         initCaptcha();
     };
@@ -137,14 +170,11 @@
         const correctCount = Math.floor(Math.random() * 3) + 4; // 4, 5, or 6
         const wrongCount = 9 - correctCount; 
 
-
         const selectedCorrect = shuffleArray(correctPool).slice(0, correctCount);
         const selectedWrong = shuffleArray(wrongPool).slice(0, wrongCount);
         
-
         currentRenderedImages = shuffleArray([...selectedCorrect, ...selectedWrong]);
         
-
         currentRenderedImages.forEach((imgName, index) => {
             const div = document.createElement('div');
             div.className = 'grid-item';
@@ -156,10 +186,8 @@
             grid.appendChild(div);
         });
 
-
         document.getElementById('status-msg').style.visibility = 'hidden';
     }
-
 
     function shuffleArray(array) {
         let res = [...array];
@@ -169,7 +197,6 @@
         }
         return res;
     }
-
 
     function toggleSelect(element, index) {
         if (currentSelection.has(index)) {
@@ -181,8 +208,7 @@
         }
     }
 
-
-function verifyAndUnlock() {
+    function verifyAndUnlock() {
         const passwordField = document.getElementById('password-input');
         const password = passwordField.value;
         const msg = document.getElementById('status-msg');
@@ -214,14 +240,12 @@ function verifyAndUnlock() {
         }
 
         try {
-
             if (typeof CryptoJS === 'undefined') {
                 alert("❌ 严重错误：CryptoJS 库未加载！");
                 return;
             }
 
             const cleanEncryptedData = ENCRYPTED_DATA.trim(); 
-
             const bytes = CryptoJS.AES.decrypt(cleanEncryptedData, password);
             
             const originalText = bytes.toString(CryptoJS.enc.Utf8);
@@ -232,7 +256,6 @@ function verifyAndUnlock() {
             }
             
             console.log("解密成功，得到的文本是:", originalText); 
-
             const data = JSON.parse(originalText); 
             
             alert("✅ 验证成功！ \n【必读】 \n1. 先在左侧点击最新的（Latest）版本，或选择你需要的版本，确保链接出现后复制链接； \n2. 链接只允许在本网站查看/复制，只允许在代理软件中粘贴。不允许将本网站中的链接粘贴到 notion/备忘录/学习通/微信/QQ 等其他平台； \n3. 一键复制功能在手机上可能失效，如果无法一键复制就选择链接地址手动复制。");            
@@ -254,11 +277,9 @@ function verifyAndUnlock() {
             msg.textContent = "解密失败";
             msg.style.visibility = 'visible';
             
-
             initCaptcha();
         }
     }
-
 
     function showDashboard(data) {
         document.getElementById('login-box').style.display = 'none';
@@ -292,4 +313,3 @@ function verifyAndUnlock() {
 </script>
 </body>
 </html>
-
