@@ -1,512 +1,959 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>代理策略可视化</title>
-    <style>
-        :root {
-            --bg-color: #f7fbfa;
-            --text-color: #4a5568;
-            --macaron-blue: #A0C4FF;
-            --macaron-pink: #FFC6FF;
-            --macaron-green: #CAFFBF;
-            --macaron-yellow: #FDFFB6;
-            --macaron-purple: #BDB2FF;
-            --direct-color: #FFD6A5;
-            --reject-color: #FFADAD;
-            --line-color: rgba(160, 196, 255, 0.4);
-            --line-width: 4px;
-        }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12142e">
+<title>分流星图 · 代理策略可视化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@900&text=%E5%88%86%E6%B5%81%E6%98%9F%E5%9B%BE&display=swap">
+<style>
+@font-face{
+  font-family:"Flag Emoji";
+  src:url("https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1.8/dist/TwemojiCountryFlags.woff2") format("woff2");
+  unicode-range:U+1F1E6-1F1FF,U+1F3F4,U+E0062-E0063,U+E0065,U+E0067,U+E006C,U+E006E,U+E0073-E0074,U+E0077,U+E007F;
+  font-display:swap;
+}
+:root{
+  color-scheme:dark;
+  --night:#12142e;
+  --glass:rgba(29,32,78,.6);
+  --hair:rgba(170,178,255,.14);
+  --star:#eef0ff;
+  --dim:#a8add6;
+  --faint:#7a80b2;
+  --gp:#5aa9ff;
+  --pure:#4fe0a2;
+  --res:#ffbf5e;
+  --bak:#b690ff;
+  --direct:#dfe6f6;
+  --reject:#ff5c76;
+  --flag:"Sora";
+  --sans:var(--flag),"Sora","PingFang SC","HarmonyOS Sans SC","MiSans","Microsoft YaHei UI","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC",system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  --serif:"Noto Serif SC","Noto Serif CJK SC","Source Han Serif SC","Songti SC","STSong",serif;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html.win{--flag:"Flag Emoji"}
+*{box-sizing:border-box}
+html{background:var(--night);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;min-height:100vh;color:var(--star);font:400 14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #cfd6ff;outline-offset:2px}
 
-        body {
-            margin: 0;
-            padding: 20px 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-        }
+/* ---------- 夜空 ---------- */
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none}
+.aura{position:fixed;inset:0;z-index:-3;pointer-events:none;
+  background:
+    radial-gradient(1100px 680px at 88% -12%,rgba(90,169,255,.17),transparent 62%),
+    radial-gradient(820px 620px at -12% 34%,rgba(182,144,255,.13),transparent 62%),
+    radial-gradient(900px 700px at 58% 112%,rgba(79,224,162,.08),transparent 62%),
+    linear-gradient(180deg,#15183c 0%,#101232 48%,#0c0e28 100%);}
 
-        .header { text-align: center; margin-bottom: 30px; }
-        h1 { margin: 0 0 15px 0; color: #2d3748; }
+/* ---------- 头部 ---------- */
+.hero{max-width:1320px;margin:0 auto;padding:60px 40px 26px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:48px;align-items:end}
+h1{margin:0;font-family:var(--serif);font-weight:900;font-size:clamp(66px,9.6vw,138px);line-height:.98;letter-spacing:.05em;
+  background:linear-gradient(176deg,#ffffff 18%,#c4c9f4 62%,#8f97d8 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 34px rgba(120,140,255,.3))}
+.lede{margin:20px 0 0;max-width:31em;color:var(--dim);font-size:15px;line-height:1.85}
+.legend{list-style:none;margin:20px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:var(--dim)}
+.legend li{display:flex;align-items:center;gap:7px}
+.legend li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}
 
-        .toggle-btn {
-            background: #fff;
-            border: 2px solid var(--macaron-purple);
-            padding: 10px 24px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: bold;
-            color: var(--macaron-purple);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(189, 178, 255, 0.3);
-        }
+.now{position:relative;padding:20px 22px 22px;border-radius:26px;background:linear-gradient(160deg,rgba(44,48,108,.6),rgba(24,27,66,.5));border:1px solid var(--hair);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.now-h{margin:0 0 14px;font-size:13px;font-weight:500;color:var(--dim)}
+.now-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 22px}
+.now-k{display:block;font-size:12px;color:var(--faint);margin-bottom:5px}
+.now-v{display:flex;align-items:center;gap:9px;min-width:0}
+.now-v i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 12px var(--c);transition:background .45s,box-shadow .45s}
+.now-v b{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-        .toggle-btn:hover { background: var(--macaron-purple); color: white; }
+/* ---------- 舞台 ---------- */
+.stage{position:relative;max-width:1320px;margin:0 auto;padding:16px 40px 170px;display:grid;
+  grid-template-columns:minmax(200px,250px) minmax(320px,400px) minmax(210px,250px);justify-content:space-between;align-items:start}
+.layer{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+#wires,#sparks{z-index:0}
+#ports{z-index:2}
+.col{position:relative;z-index:1;min-width:0}
+.col-h{display:flex;align-items:baseline;gap:10px;margin:0 0 4px;padding-left:6px;font-size:13px;font-weight:500;color:var(--dim)}
+.col-h small{font-size:12px;font-weight:400;color:var(--faint)}
+.col-h .reset{margin-left:auto;appearance:none;border:1px solid var(--hair);background:rgba(255,255,255,.04);border-radius:999px;padding:3px 11px;font-size:12px;color:var(--dim);cursor:pointer;transition:opacity .3s,background .2s}
+.col-h .reset:hover{background:rgba(255,255,255,.09)}
+.col-h .reset:disabled{opacity:.35;cursor:default}
+.only-lanes{display:none}
 
-        .main-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            padding-bottom: 40px;
-            -webkit-overflow-scrolling: touch;
-        }
+/* 连线 */
+.w-glow{fill:none;stroke-width:7;stroke-linecap:round;opacity:.15;transition:opacity .35s}
+.w-core{fill:none;stroke-width:1.6;stroke-linecap:round;opacity:.88;transition:opacity .35s,stroke-width .35s}
+.w-flow{fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:1 13;opacity:0;animation:dash 1.1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-14}}
+.stage.focusing .w-glow.dim{opacity:.025}
+.stage.focusing .w-core.dim{opacity:.1}
+.stage.focusing .w-glow.hot{opacity:.34}
+.stage.focusing .w-core.hot{opacity:1;stroke-width:2.3}
+.port{transition:opacity .35s}
+.stage.focusing .port.dim{opacity:.15}
 
-        .container {
-            display: flex;
-            justify-content: space-between;
-            position: relative;
-            min-width: 950px;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
+/* 网站 */
+.sec-h{margin:22px 0 4px;padding-left:8px;font-size:12px;font-weight:500;color:var(--faint)}
+.site{appearance:none;border:0;background:transparent;text-align:left;width:100%;display:grid;grid-template-columns:30px minmax(0,1fr) 12px;align-items:center;gap:10px;padding:6px 2px 6px 6px;border-radius:13px;cursor:pointer;transition:background .25s,opacity .35s}
+.site:hover,.site.hot{background:rgba(255,255,255,.05)}
+.stage.focusing .site:not(.hot){opacity:.36}
+.s-icon{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:16px;line-height:1;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.s-text{min-width:0}
+.s-name{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-exit{display:block;font-size:11.5px;color:var(--ec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .45s}
+.s-star{justify-self:end;width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 0 3px rgba(255,255,255,.06),0 0 12px var(--c)}
+.lane,.lane-exit{display:none}
 
-        .column {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            width: 300px;
-            z-index: 2;
-        }
+/* 策略组 */
+.station{position:relative;margin:14px 0 18px;padding:14px;border-radius:22px;background:var(--glass);
+  -webkit-backdrop-filter:blur(12px) saturate(1.25);backdrop-filter:blur(12px) saturate(1.25);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 24px 60px -36px var(--c);transition:opacity .45s,filter .45s,box-shadow .45s}
+.station::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(140deg,var(--c),rgba(255,255,255,.06) 42%,rgba(255,255,255,.04) 70%,var(--c));opacity:.55;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.station.idle{opacity:.5;filter:saturate(.5)}
+.station.lit{box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1px var(--c),0 26px 70px -30px var(--c)}
+.st-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.st-emoji{flex:none;width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:20px;line-height:1;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px var(--c),0 0 24px -8px var(--c)}
+.st-titles{min-width:0;flex:1}
+.st-name{margin:0;font-size:15.5px;font-weight:600;line-height:1.3}
+.st-desc{margin:2px 0 0;font-size:12px;color:var(--dim)}
+.st-badge{flex:none;align-self:flex-start;font-size:11.5px;color:var(--c);padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);white-space:nowrap}
+.station.idle .st-badge{color:var(--faint)}
+.st-opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.opt{appearance:none;position:relative;text-align:left;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:0;min-height:40px;padding:8px 10px 8px 25px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);transition:background .25s,border-color .25s,box-shadow .25s,transform .15s}
+.opt::before{content:"";position:absolute;left:10px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;border:1.5px solid rgba(255,255,255,.3);transition:background .25s,border-color .25s,box-shadow .25s}
+.opt:hover{background:rgba(255,255,255,.075)}
+.opt:active{transform:scale(.97)}
+.opt[aria-checked="true"]{background:rgba(255,255,255,.1);border-color:var(--c);box-shadow:0 0 24px -8px var(--c),inset 0 0 18px -10px var(--c)}
+.opt[aria-checked="true"]::before{background:var(--c);border-color:var(--c);box-shadow:0 0 10px var(--c)}
+.o-label{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.opt small{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-idle{margin:10px 2px 0;font-size:11.5px;color:var(--faint);visibility:hidden}
+.station.idle .st-idle{visibility:visible}
 
-        .col-title {
-            text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 10px; color: #718096;
-        }
+/* 出口 */
+.exits{align-self:stretch}
+.exit{position:absolute;left:0;right:0;display:grid;grid-template-columns:46px minmax(0,1fr);align-items:center;gap:14px;cursor:default;transition:top .7s cubic-bezier(.65,0,.35,1),opacity .45s,filter .45s}
+.exit.idle{opacity:.42;filter:saturate(.4)}
+.x-ring{position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:19px;line-height:1;background:radial-gradient(circle,rgba(255,255,255,.12),rgba(22,25,64,.95) 68%);box-shadow:0 0 0 1.5px var(--c),0 0 30px -4px var(--c);transition:box-shadow .45s}
+.x-ring::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:1px solid var(--c);opacity:.3}
+.exit.ping .x-ring::after{animation:ping .9s ease-out}
+@keyframes ping{0%{transform:scale(.85);opacity:.9}100%{transform:scale(1.55);opacity:0}}
+.exit.lit .x-ring{box-shadow:0 0 0 2px var(--c),0 0 44px -2px var(--c)}
+.x-title{display:block;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.x-cap{display:block;font-size:11.5px;color:var(--dim)}
+.x-count{display:block;margin-top:2px;font-size:11.5px;color:var(--c)}
 
-        .card {
-            background: white; border-radius: 12px; padding: 12px 16px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02); border-left: 6px solid #ccc;
-            transition: transform 0.3s, box-shadow 0.3s, opacity 0.3s;
-            position: relative;
-        }
+/* 底部路线条 */
+.routebar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;width:min(880px,calc(100% - 20px));min-height:56px;padding:12px 16px;border-radius:20px;
+  background:rgba(22,25,62,.84);border:1px solid var(--hair);-webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3);box-shadow:0 20px 60px -20px rgba(0,0,0,.7);display:flex;align-items:center;gap:12px}
+.rb-body{flex:1;min-width:0}
+.rb-idle{margin:0;color:var(--dim);font-size:13px}
+.rb-line{margin:0 0 7px;font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-line b{color:var(--star);font-weight:600}
+.rb-chain{display:flex;flex-wrap:wrap;align-items:center;row-gap:6px}
+.rb-node{display:inline-flex;align-items:baseline;gap:6px;padding:4px 11px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px var(--c)}
+.rb-node small{font-size:11px;color:var(--dim);font-weight:400}
+.rb-node.end{background:var(--c);color:#12142e;box-shadow:0 0 18px -4px var(--c)}
+.rb-link{width:20px;height:2px;flex:none;background:linear-gradient(90deg,var(--a),var(--b));box-shadow:0 0 8px var(--b)}
+.rb-list{margin:0;font-size:12.5px;color:var(--star);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rb-close{flex:none;appearance:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--hair);background:rgba(255,255,255,.05);color:var(--dim);font-size:16px;line-height:1;cursor:pointer}
+.rb-close:hover{background:rgba(255,255,255,.1)}
+.only-touch{display:none}
+@media (hover:none){.only-touch{display:inline}.only-mouse{display:none}}
 
-        #col-sites { gap: 6px; }
-        #col-sites .card { padding: 8px 12px; }
-        #col-sites .card-title { font-size: 13px; margin-bottom: 0; font-weight: 500; }
+#probe-svg{position:absolute;width:0;height:0;overflow:hidden;visibility:hidden}
 
-        .site-card { border-color: var(--macaron-blue); cursor: default; }
-        .group-card { border-color: var(--macaron-yellow); }
-        .node-card { border-color: var(--macaron-green); }
-        .direct-card { border-color: var(--direct-color); }
-        .reject-card { border-color: var(--reject-color); }
+@media (min-width:1080px) and (max-width:1279.98px){
+  .hero{padding-left:28px;padding-right:28px}
+  .stage{grid-template-columns:200px 360px 200px;padding-left:28px;padding-right:28px}
+}
+/* ---------- 窄屏：线路列表 ---------- */
+@media (max-width:1079.98px){
+  .hero{grid-template-columns:1fr;gap:24px;padding:38px 18px 14px;max-width:720px}
+  h1{font-size:clamp(58px,17vw,96px)}
+  .lede{font-size:14.5px;margin-top:14px}
+  .now{padding:16px 18px 18px;border-radius:22px}
+  .now-v b{font-size:14.5px}
+  .stage{grid-template-columns:minmax(0,1fr);max-width:720px;padding:6px 18px 190px}
+  .stations{order:1;padding-right:26px}
+  .sites{order:2;margin-top:10px}
+  .exits{display:none}
+  #sparks{display:none}
+  .w-flow{opacity:.9}
+  .only-graph{display:none}
+  .only-lanes{display:inline}
+  .station{margin:12px 0 14px}
+  .st-opts{grid-template-columns:repeat(auto-fill,minmax(136px,1fr))}
+  .site{grid-template-columns:28px minmax(60px,6.9em) minmax(34px,1fr) auto;gap:8px;padding:8px 4px 8px 6px}
+  .s-icon{width:28px;height:28px;font-size:15px}
+  .s-name{font-size:13.5px;white-space:normal;line-height:1.3}
+  .s-star,.s-exit{display:none}
+  .lane{display:flex;position:relative;height:24px;align-items:center;min-width:0}
+  .lane-exit{display:block;justify-self:end;max-width:12em;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:500;color:var(--ec);background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px var(--ec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .45s,box-shadow .45s}
+  .rb-line{white-space:normal}
+}
+@media (max-width:560px){
+  .station[data-g="res"] .st-opts{grid-template-columns:1fr}
+  .station[data-g="res"] .opt{min-height:36px;padding-top:6px;padding-bottom:6px}
+}
+@media (max-width:380px){
+  .site{grid-template-columns:minmax(56px,6.4em) minmax(30px,1fr) auto}
+  .s-icon{display:none}
+}
+.lane-wire{position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;border-radius:2px;background:var(--ec);box-shadow:0 0 10px -2px var(--ec)}
+.spark-track{position:absolute;left:0;top:0;width:100%;height:100%;animation:lane-flow var(--dur,2.8s) linear infinite;animation-delay:var(--delay,0s)}
+.spark-track::after{content:"";position:absolute;right:-3px;top:-2px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 6px 2px var(--ec),0 0 16px 3px var(--ec)}
+@keyframes lane-flow{0%{transform:translateX(-100%);opacity:0}8%{opacity:1}88%{opacity:1}100%{transform:translateX(0);opacity:0}}
+.lane-stops{position:relative;display:flex;justify-content:space-evenly;align-items:center;width:100%}
+.site.is-reject .lane-stops{justify-content:flex-end}
+.stop{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:400;line-height:1;background:#191c46;box-shadow:0 0 0 1.5px var(--c),0 0 12px -2px var(--c);animation:stop-in .55s cubic-bezier(.2,.9,.3,1.35) both}
+@keyframes stop-in{from{transform:scale(.2);opacity:0}}
+.site.is-reject .lane-wire{background:repeating-linear-gradient(90deg,var(--ec) 0 6px,transparent 6px 11px);box-shadow:none}
+.site.is-reject .spark-track{animation-name:lane-block}
+@keyframes lane-block{0%{transform:translateX(-100%);opacity:0}10%{opacity:1}72%{transform:translateX(-16%);opacity:1}80%{transform:translateX(-14%);opacity:0}100%{transform:translateX(-14%);opacity:0}}
+.site.flash .lane-wire{animation:wire-flash 1s ease-out}
+@keyframes wire-flash{0%{filter:brightness(2.6);box-shadow:0 0 18px 3px var(--ec)}100%{filter:none}}
 
-        .card-title { font-weight: bold; margin-bottom: 8px; font-size: 15px; }
-
-        .slider-container {
-            display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px;
-        }
-        
-        .slider-item {
-            padding: 6px 12px; border-radius: 20px;
-            background: #f0f4f8; font-size: 13px; cursor: pointer; color: #4a5568;
-            transition: background 0.3s, color 0.3s, transform 0.1s; border: 1px solid transparent;
-            user-select: none; white-space: nowrap;
-        }
-        .slider-item:hover { background: #e2e8f0; transform: scale(1.05); }
-        .slider-item.active {
-            background: var(--macaron-purple); color: white; font-weight: bold;
-            box-shadow: 0 2px 5px rgba(189, 178, 255, 0.4);
-        }
-        .slider-item.disabled { opacity: 0.6; cursor: not-allowed; }
-
-        body:not(.global-mode) #group-GLOBAL { display: none; }
-        body.global-mode #group-GLOBAL { 
-            display: block; 
-            border-color: #ff9a9e; 
-            box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3);
-        }
-        body.global-mode .group-card:not(#group-GLOBAL) { 
-            opacity: 0.3; 
-            pointer-events: none; 
-        }
-
-        svg.lines {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 1; pointer-events: none;
-        }
-
-        path {
-            fill: none; stroke-linecap: round; pointer-events: stroke; 
-            transition: stroke 0.2s, stroke-width 0.2s; cursor: pointer;
-            animation: dash 1s ease-out forwards;
-        }
-
-        @keyframes dash {
-            from { stroke-dasharray: 0, 1000; }
-            to { stroke-dasharray: 1000, 0; }
-        }
-
-        .dimmed { opacity: 0.2 !important; }
-        .highlight-line { stroke: var(--macaron-pink) !important; stroke-width: 6px !important; z-index: 99; }
-        .hover-line { stroke: #a0aec0 !important; stroke-width: 8px !important; }
-
-        #tooltip {
-            position: fixed; background: rgba(45, 55, 72, 0.95); color: white;
-            padding: 10px 15px; border-radius: 8px; font-size: 14px; z-index: 1000;
-            pointer-events: none; opacity: 0; transition: opacity 0.2s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); white-space: nowrap; transform: translate(15px, 15px);
-        }
-
-        #infoBox {
-            position: fixed; bottom: 30px; right: 30px; background: white;
-            border-left: 6px solid var(--macaron-pink); padding: 20px; border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 1001;
-            width: 300px; display: none; flex-direction: column; gap: 10px;
-        }
-        .info-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px;}
-        .close-btn { cursor: pointer; color: #a0aec0; font-size: 20px; line-height: 1; }
-        .close-btn:hover { color: #e53e3e; }
-        .route-step { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-top: 4px; }
-        .route-arrow { color: #cbd5e0; font-size: 12px; margin-left: 5px;}
-
-    </style>
+@media (prefers-reduced-motion:reduce){
+  .spark-track,.w-flow{display:none}
+  .exit,.station,.site,.now-v i{transition:none}
+  .stop,.site.flash .lane-wire,.exit.ping .x-ring::after{animation:none}
+}
+</style>
 </head>
 <body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="aura" aria-hidden="true"></div>
 
-    <div class="header">
-        <h1>✨ 代理策略可视化 ✨</h1>
-        <button id="modeToggle" class="toggle-btn">当前：规则模式 (Rule)</button>
+<header class="hero">
+  <div>
+    <h1>分流星图</h1>
+    <p class="lede">每个网站的流量最后从哪里出去，这张图一眼就能看懂。点选策略组里的选项，连线会立刻改道。</p>
+    <ul class="legend" aria-label="颜色说明">
+      <li style="--c:var(--gp)">通用代理</li>
+      <li style="--c:var(--pure)">纯净保护</li>
+      <li style="--c:var(--res)">住宅 IP</li>
+      <li style="--c:var(--bak)">备用节点</li>
+      <li style="--c:var(--direct)">不走代理</li>
+      <li style="--c:var(--reject)">阻断连接</li>
+    </ul>
+  </div>
+  <section class="now" aria-label="此刻的去向">
+    <h2 class="now-h">此刻</h2>
+    <div class="now-grid">
+      <div data-now="pure"><span class="now-k">AI 与 TikTok</span><span class="now-v"><i></i><b></b></span></div>
+      <div data-now="gp"><span class="now-k">海外网站</span><span class="now-v"><i></i><b></b></span></div>
+      <div data-now="direct"><span class="now-k">国内网站</span><span class="now-v"><i></i><b></b></span></div>
+      <div data-now="reject"><span class="now-k">Adobe 监测</span><span class="now-v"><i></i><b></b></span></div>
     </div>
+  </section>
+</header>
 
-    <div id="tooltip"></div>
+<main class="stage" id="stage">
+  <svg class="layer" id="wires" aria-hidden="true"><defs></defs><g class="glows"></g><g class="cores"></g><g class="flows"></g></svg>
+  <canvas class="layer" id="sparks" aria-hidden="true"></canvas>
 
-    <div id="infoBox">
-        <div class="info-header">
-            <span id="infoTitle">网站名称</span>
-            <span class="close-btn" onclick="closeInfoBox()">×</span>
-        </div>
-        <div id="infoRoute"></div>
-    </div>
+  <section class="col sites" id="sites" aria-label="网站">
+    <h2 class="col-h"><span class="only-graph">网站</span><span class="only-lanes">各网站的去向</span><small class="only-lanes">点一下看完整路线</small></h2>
+  </section>
 
-    <div class="main-wrapper">
-        <div class="container" id="mainContainer">
-            <svg class="lines" id="svgLines"></svg>
-            <div class="column" id="col-sites"><div class="col-title">🎯 网站</div></div>
-            <div class="column" id="col-groups"><div class="col-title">🎛️ 组</div></div>
-            <div class="column" id="col-nodes"><div class="col-title">🚀 落地节点</div></div>
-        </div>
-    </div>
+  <section class="col stations" id="stations" aria-label="策略组">
+    <h2 class="col-h">策略组<small>点选即可切换</small><button type="button" class="reset" id="reset">恢复默认</button></h2>
+  </section>
+
+  <section class="col exits" id="exits" aria-label="出口">
+    <h2 class="col-h">出口</h2>
+  </section>
+
+  <svg class="layer" id="ports" aria-hidden="true"></svg>
+</main>
+
+<div class="routebar" id="routebar" role="status" aria-live="polite"><div class="rb-body"></div></div>
+<svg id="probe-svg" aria-hidden="true"><path id="probe"/></svg>
 
 <script>
-    let isGlobalMode = false;
+(() => {
+'use strict';
 
-    // 落地节点名称映射
-    const nodes = {
-        'DIRECT': { name: '🟢 不代理 (国内网直连)', type: 'direct', short: '直连不代理' },
-        'REJECT': { name: '🔴 拦截', type: 'reject', short: '拦截' },
-        'BLOCK_AI': { name: '🚫 无法使用 (区域限制)', type: 'reject', short: '区域受限' },
-        'JP': { name: '🇯🇵 日本节点池', type: 'node', short: '🇯🇵 JP' },
-        'HK': { name: '🇭🇰 香港节点池', type: 'node', short: '🇭🇰 HK' },
-        'TW': { name: '🇨🇳 台湾节点池', type: 'node', short: '🇨🇳 TW' },
-        'US': { name: '🇺🇸 美国节点池', type: 'node', short: '🇺🇸 US' },
-        'SG': { name: '🇸🇬 新加坡节点池', type: 'node', short: '🇸🇬 SG' },
-        'ISP_JP': { name: '🇯🇵 日本 ISP', type: 'node', short: '日本 ISP' },
-        'ISP_HK': { name: '🇭🇰 香港 ISP', type: 'node', short: '香港 ISP' },
-        'ISP_TW': { name: '🇨🇳 台湾 ISP', type: 'node', short: '台湾 ISP' },
-        'ISP_US': { name: '🇺🇸 美国 ISP', type: 'node', short: '美国 ISP' },
-        'ISP_KR': { name: '🇰🇷 韩国 ISP', type: 'node', short: '韩国 ISP' },
-        'ISP_UK': { name: '🇬🇧 英国 ISP', type: 'node', short: '英国 ISP' }
-    };
+/* ====================== 数据（来自你的配置） ====================== */
+const COL = {gp:'#5aa9ff', pure:'#4fe0a2', res:'#ffbf5e', bak:'#b690ff', direct:'#dfe6f6', reject:'#ff5c76'};
 
-    // 策略组修改：抽离出公共的 ISPRouting 路由组
-    const groups = {
-        'GLOBAL': { name: '🌍 GLOBAL (全局配置)', options: ['DIRECT', 'REJECT', 'JP', 'HK', 'TW', 'SG', 'US', 'ISPRouting'], selected: 'JP' },
-        'GeneralProxy': { name: '🌐 General Proxy', options: ['JP', 'HK', 'TW', 'SG', 'US', 'ISPRouting'], selected: 'JP' },
-        'ISPNodes': { name: '🏡 ISP Nodes', options: ['ISP_HK', 'ISP_JP', 'ISP_TW', 'ISP_US', 'ISP_KR', 'ISP_UK'], selected: 'ISP_HK' },
-        'ISPProtect': { name: '☘️ ISP 纯净保护', options: ['ISPNodes', 'ISPChain', 'GeneralProxy'], selected: 'ISPNodes' },
-        'ISPRouting': { name: '🏠 ISP', options: ['ISPNodes', 'ISPChain'], selected: 'ISPNodes' },
-        'ISPChain': { name: '⛓️ ISP Chain', options: ['odes'], selected: 'ISPNodes', hidden: true },
-        'Bilibili': { name: '⚡️ Bilibili', options: ['DIRECT', 'HK', 'TW'], selected: 'DIRECT' },
-        'Streaming': { name: '🎬 Streaming Media', options: ['TW', 'HK', 'JP', 'SG', 'US', 'GeneralProxy'], selected: 'TW' },
-        'Spotify': { name: '🎼 Spotify', options: ['DIRECT', 'GeneralProxy', 'JP', 'HK', 'TW', 'US'], selected: 'GeneralProxy' },
-        'Advertisement': { name: '⛔️ Advertisement', options: ['REJECT', 'DIRECT', 'GeneralProxy'], selected: 'REJECT' },
-        'Auto': { name: '💡 自动选择最快节点', options: ['HK', 'TW', 'GeneralProxy'], selected: 'HK' }
-    };
+const GROUPS = [
+  {id:'gp', full:'🌐 General Proxy', emoji:'🌐', name:'General Proxy', desc:'海外网站的默认出口',
+    options:[{label:'Host (Reality)'}, {label:'Host (Hy2)'}, {label:'⛵️ 备用', to:'bak'}]},
+  {id:'pure', full:'☘️ 绝对领域纯净保护', emoji:'☘️', name:'绝对领域纯净保护', desc:'AI 与 TikTok 专用',
+    options:[{label:'🚫 （默认）关闭', to:'gp', hint:'跟随 General Proxy'}, {label:'🏠 Residential', to:'res', hint:'改走住宅 IP'}]},
+  {id:'res', full:'🏠 Residential', emoji:'🏠', name:'Residential', desc:'住宅 IP 节点', idle:'把纯净保护切到 🏠 Residential 后启用',
+    options:['🇺🇸 US Residential 1','🇺🇸 US Residential 2','🇺🇸 US Residential 3','🇨🇳 TW Residential 1','🇨🇳 TW Residential 2','🇨🇳 TW Residential 3','🇨🇳 TW Residential 4','🇨🇳 TW Residential 5','🇨🇳 TW Residential 6','🇨🇳 TW Residential 7'].map(label => ({label}))},
+  {id:'bak', full:'⛵️ 备用', emoji:'⛵️', name:'备用', desc:'备用节点', idle:'把 General Proxy 切到 ⛵️ 备用 后启用',
+    options:['🇺🇸 USA','🇨🇳🇭🇰 HongKong','🇯🇵 Japan','🇨🇳 Taiwan','🇸🇬 Singapore'].map(label => ({label}))},
+];
+const G = Object.fromEntries(GROUPS.map(g => [g.id, g]));
 
-    // 网站列表
-    const sites = [
-        { name: '广告域名（部分）', rule: 'Advertisement' },
-        { name: 'Adobe 监测域名', rule: 'REJECT' },
-        { name: '中国大陆网站', rule: 'DIRECT' },
-        { name: 'Google', rule: 'GeneralProxy' },
-        { name: 'YouTube', rule: 'GeneralProxy' },
-        { name: 'TikTok', rule: 'ISPProtect' },
-        { name: 'ChatGPT（OpenAI）', rule: 'ISPProtect' },
-        { name: 'Google AI Studio / Gemini', rule: 'ISPProtect' },
-        { name: 'Claude', rule: 'ISPProtect' },
-        { name: 'Microsoft Copilot', rule: 'ISPProtect' },
-        { name: 'Microsoft', rule: 'GeneralProxy' },
-        { name: 'hoyolab', rule: 'GeneralProxy' },
-        { name: '满血Bing国际版', rule: 'GeneralProxy' },
-        { name: 'wikipedia系列', rule: 'Auto' },
-        { name: 'DLSite', rule: 'Auto' },
-        { name: 'Bangumi番组计划', rule: 'Auto' },
-        { name: 'pixiv', rule: 'Auto' },
-        { name: 'Z-Library', rule: 'Auto' },
-        { name: 'GitHub', rule: 'Auto' },
-        { name: 'Notion', rule: 'Auto' },
-        { name: 'iwara', rule: 'Auto' },
-        { name: 'JMComic', rule: 'Auto' },
-        { name: 'bilibili', rule: 'Bilibili' },
-        { name: 'Netflix', rule: 'Streaming' },
-        { name: 'HBO-MAX', rule: 'Streaming' },
-        { name: 'Disney+', rule: 'Streaming' },
-        { name: 'Bahamut 动画疯', rule: 'TW' },
-        { name: 'Spotify', rule: 'Spotify' }
-    ];
+const SECTIONS = [
+  {name:'海外常用', items:[
+    ['google','🔍','Google','搜索、地图、Gmail 和云端硬盘','gp'],
+    ['youtube','▶️','YouTube','视频与直播','gp'],
+    ['bing','🔎','Bing 必应','国际版必应搜索','gp'],
+    ['github','🐙','GitHub','代码托管与开源社区','gp'],
+    ['x','𝕏','X','原 Twitter','gp'],
+    ['telegram','✈️','Telegram','即时通讯','gp'],
+    ['netflix','🎬','Netflix','影视流媒体','gp'],
+    ['steamstore','🛒','Steam 商店','浏览和购买游戏','gp'],
+    ['steamcommunity','👥','Steam 社区','创意工坊、讨论区和个人资料','gp'],
+    ['minecraft','⛏️','Minecraft 资源','游戏资源与版本文件下载','gp'],
+    ['hoyolab','🌟','HoYoLAB','米哈游海外社区','gp'],
+    ['others','🌍','其他海外网站','没在这里单独列出的海外网站，都走这条','gp'],
+  ]},
+  {name:'AI 与 TikTok', items:[
+    ['chatgpt','💬','ChatGPT','OpenAI 的对话助手','pure'],
+    ['claude','✳️','Claude','Anthropic 的对话助手','pure'],
+    ['gemini','✨','Gemini','也包括 AI Studio 和 NotebookLM','pure'],
+    ['copilot','🧭','Copilot','微软 Copilot','pure'],
+    ['grok','⚡','Grok','xAI 的对话助手','pure'],
+    ['perplexity','🔭','Perplexity','AI 搜索引擎','pure'],
+    ['tiktok','🎵','TikTok','海外版抖音','pure'],
+  ]},
+  {name:'国内与本地', items:[
+    ['cn','🏮','中国大陆网站','百度、淘宝、知乎、B 站等','direct'],
+    ['cnapp','📱','国内常用 App','微信、支付宝、各家银行、网易云音乐等','direct'],
+    ['steamdl','⬇️','Steam 下载','游戏本体和更新的下载','direct'],
+    ['lan','🖥️','局域网设备','路由器后台、NAS、打印机','direct'],
+  ]},
+  {name:'拦截', items:[
+    ['adobe','🛡️','Adobe 正版验证','Adobe 的正版检测与数据上报','reject'],
+  ]},
+];
 
-    const colSites = document.getElementById('col-sites');
-    const colGroups = document.getElementById('col-groups');
-    const colNodes = document.getElementById('col-nodes');
-    const svgLines = document.getElementById('svgLines');
-    const tooltip = document.getElementById('tooltip');
-    const infoBox = document.getElementById('infoBox');
-    const infoTitle = document.getElementById('infoTitle');
-    const infoRoute = document.getElementById('infoRoute');
+const DEFAULTS = {gp:0, pure:0, res:0, bak:0};
+const state = {...DEFAULTS};
 
-    function getShortName(key) {
-        if (key === 'GLOBAL') return '🌍 全局选择';
-        if (key === 'GeneralProxy') return '🌐 General Proxy';
-        if (key === 'ISPRouting') return '🏠 ISP';
-        if (key === 'ISPChain') return '⛓️ ISP Chain';
-        if (key === 'ISPNodes') return '🏡 ISP Nodes';
-        if (nodes[key]) return nodes[key].short;
-        return key;
-    }
+/* ====================== 路由解析 ====================== */
+function routeOf(entry){
+  if (entry === 'direct') return {hops:[], exit:'direct', node:'不走代理', color:COL.direct, last:'direct'};
+  if (entry === 'reject') return {hops:[], exit:'reject', node:'阻断连接', color:COL.reject, last:'reject'};
+  const hops = []; let g = entry; const seen = new Set();
+  while (!seen.has(g)) {
+    seen.add(g);
+    const i = state[g], o = G[g].options[i];
+    hops.push({g, i, o});
+    if (o.to) { g = o.to; continue; }
+    return {hops, exit: g === 'res' ? 'res' : 'proxy', node:o.label, color:COL[g], last:g};
+  }
+  return {hops, exit:'proxy', node:'', color:COL.gp, last:'gp'};
+}
+const keyOf = r => r.hops.map(h => h.g + h.i).join('>') + '|' + r.exit + '|' + r.node;
+const exitLabel = r => r.node;
+const isActive = id => id === 'gp' || id === 'pure' || (id === 'res' && state.pure === 1) || (id === 'bak' && state.gp === 2);
 
-    function getFullName(key) {
-        if (groups[key]) return groups[key].name;
-        if (nodes[key]) return nodes[key].name;
-        return key;
-    }
+/* ====================== 小工具 ====================== */
+const $ = (s, r = document) => r.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const stage = $('#stage'), sitesCol = $('#sites'), stCol = $('#stations'), exCol = $('#exits');
+const wires = $('#wires'), defs = wires.querySelector('defs'), gGlow = wires.querySelector('.glows'), gCore = wires.querySelector('.cores'), gFlow = wires.querySelector('.flows');
+const portsSvg = $('#ports'), cvs = $('#sparks'), ctx = cvs.getContext('2d'), probe = $('#probe');
+const rb = $('#routebar'), rbBody = rb.querySelector('.rb-body');
+const mqGraph = matchMedia('(min-width: 1080px)');
+const mqReduce = matchMedia('(prefers-reduced-motion: reduce)');
+let mode = mqGraph.matches ? 'graph' : 'lanes';
+let reduce = mqReduce.matches;
+if (/Windows/i.test(navigator.userAgent)) document.documentElement.classList.add('win');
 
-    function initUI() {
-        colSites.innerHTML = '<div class="col-title">🎯 网站</div>';
-        colGroups.innerHTML = '<div class="col-title">🎛️ 组</div>';
-        colNodes.innerHTML = '<div class="col-title">🚀 落地</div>';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+const hexA = (h, a) => { const n = parseInt(h.slice(1), 16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; };
+const flagOf = label => { const m = label.match(/^(?:\uD83C[\uDDE6-\uDDFF]){2,}/); return m ? m[0].slice(-4) : null; };
+const seg = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('zh', {granularity:'grapheme'}) : null;
+const graphemes = s => seg ? Array.from(seg.segment(s), x => x.segment) : Array.from(s);
 
-        sites.forEach((site, index) => {
-            const div = document.createElement('div');
-            div.className = 'card site-card';
-            div.id = `site-${index}`;
-            div.innerHTML = `<div class="card-title">${site.name}</div>`;
-            div.addEventListener('mouseenter', () => highlightPath(index));
-            div.addEventListener('mouseleave', resetHighlight);
-            colSites.appendChild(div);
-        });
+function rel(el){
+  const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+  const l = r.left - s.left, t = r.top - s.top;
+  return {l, t, r:l + r.width, b:t + r.height, w:r.width, h:r.height, cx:l + r.width/2, cy:t + r.height/2};
+}
 
-        Object.keys(groups).forEach(key => {
-            if(groups[key].hidden) return;
-            const group = groups[key];
-            const div = document.createElement('div');
-            div.className = 'card group-card';
-            div.id = `group-${key}`;
-            
-            let sliderHTML = `<div class="slider-container">`;
-            if (group.disabled) {
-                sliderHTML += `<div class="slider-item active disabled">${getShortName(group.selected)} (自动测速)</div>`;
-            } else {
-                group.options.forEach(opt => {
-                    const isActive = opt === group.selected ? 'active' : '';
-                    sliderHTML += `<div class="slider-item ${isActive}" onclick="updateGroup('${key}', '${opt}')">${getShortName(opt)}</div>`;
-                });
-            }
-            sliderHTML += `</div>`;
+const GLYPHS = '░▒▓◇◆○●◌✦✧';
+function setText(el, text, fx){
+  if (el._target === text) return;
+  el._target = text;
+  clearInterval(el._timer);
+  if (!fx || reduce) { el.textContent = text; return; }
+  const parts = graphemes(text), total = 12; let step = 0;
+  el._timer = setInterval(() => {
+    step++;
+    const shown = Math.floor(parts.length * step / total);
+    el.textContent = parts.map((c, i) => i < shown || c === ' ' ? c : GLYPHS[(Math.random()*GLYPHS.length)|0]).join('');
+    if (step >= total) { clearInterval(el._timer); el.textContent = text; }
+  }, 32);
+}
 
-            div.innerHTML = `<div class="card-title">${group.name}</div>${sliderHTML}`;
-            colGroups.appendChild(div);
-        });
+/* ====================== 构建界面 ====================== */
+const ST = {};
+GROUPS.forEach(g => {
+  const el = document.createElement('article');
+  el.className = 'station'; el.dataset.g = g.id; el.style.setProperty('--c', COL[g.id]);
+  el.innerHTML = `<header class="st-head"><span class="st-emoji" aria-hidden="true">${g.emoji}</span><div class="st-titles"><h3 class="st-name">${esc(g.name)}</h3><p class="st-desc">${esc(g.desc)}</p></div><span class="st-badge"></span></header><div class="st-opts" role="radiogroup" aria-label="${esc(g.full)}"></div>${g.idle ? `<p class="st-idle">${esc(g.idle)}</p>` : ''}`;
+  const box = el.querySelector('.st-opts');
+  const chips = g.options.map((o, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'opt'; b.setAttribute('role', 'radio');
+    if (o.to) { b.classList.add('ptr'); b.style.setProperty('--to', COL[o.to]); }
+    b.innerHTML = `<span class="o-label">${esc(o.label)}</span>${o.hint ? `<small>${esc(o.hint)}</small>` : ''}`;
+    b.title = o.label;
+    b.addEventListener('click', () => choose(g.id, i));
+    box.appendChild(b);
+    return b;
+  });
+  el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' && !pinned && mode === 'graph') setFocus({kind:'group', g:g.id}); });
+  el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !pinned && focus && focus.kind === 'group') setFocus(null); });
+  stCol.appendChild(el);
+  ST[g.id] = {el, head:el.querySelector('.st-head'), chips, badge:el.querySelector('.st-badge')};
+});
 
-        Object.keys(nodes).forEach(key => {
-            const node = nodes[key];
-            const div = document.createElement('div');
-            div.className = `card node-card ${node.type}-card`;
-            div.id = `node-${key}`;
-            div.innerHTML = `<div class="card-title">${node.name}</div>`;
-            colNodes.appendChild(div);
-        });
-    }
+const EX = {};
+['proxy','res','direct','reject'].forEach(k => {
+  const el = document.createElement('div');
+  el.className = 'exit'; el.dataset.x = k;
+  el.innerHTML = `<span class="x-ring"><span class="x-icon"></span></span><span><b class="x-title"></b><span class="x-cap"></span><span class="x-count"></span></span>`;
+  el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' && !pinned) setFocus({kind:'exit', x:k}); });
+  el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !pinned && focus && focus.kind === 'exit') setFocus(null); });
+  exCol.appendChild(el);
+  EX[k] = {el, icon:el.querySelector('.x-icon'), title:el.querySelector('.x-title'), cap:el.querySelector('.x-cap'), count:el.querySelector('.x-count'), n:-1};
+});
 
-    window.updateGroup = function(groupId, value) {
-        groups[groupId].selected = value;
-        initUI(); 
-        setTimeout(drawAllLines, 50); 
-    };
+const SITES = [];
+SECTIONS.forEach(sec => {
+  const h = document.createElement('h3'); h.className = 'sec-h'; h.textContent = sec.name; sitesCol.appendChild(h);
+  sec.items.forEach(([id, icon, name, sub, entry]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'site'; b.style.setProperty('--c', COL[entry]);
+    b.innerHTML = `<span class="s-icon" aria-hidden="true">${icon}</span><span class="s-text"><span class="s-name">${esc(name)}</span><span class="s-exit"></span></span><span class="s-star"></span><span class="lane" aria-hidden="true"><span class="lane-wire"><span class="spark-track"></span></span><span class="lane-stops"></span></span><span class="lane-exit" aria-hidden="true"></span>`;
+    const track = b.querySelector('.spark-track');
+    track.style.setProperty('--dur', (2.4 + Math.random()*1.4).toFixed(2) + 's');
+    track.style.setProperty('--delay', (-Math.random()*3).toFixed(2) + 's');
+    const site = {id, icon, name, sub, entry, el:b, star:b.querySelector('.s-star'), exitTag:b.querySelector('.s-exit'), stops:b.querySelector('.lane-stops'), wire:b.querySelector('.lane-wire'), laneExit:b.querySelector('.lane-exit'), key:undefined};
+    if (entry === 'reject') b.classList.add('is-reject');
+    b.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' && !pinned) setFocus({kind:'site', site}); });
+    b.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !pinned && focus && focus.kind === 'site') setFocus(null); });
+    b.addEventListener('focus', () => { if (!pinned) setFocus({kind:'site', site}); });
+    b.addEventListener('blur', () => { if (!pinned && focus && focus.site === site) setFocus(null); });
+    b.addEventListener('click', () => togglePin(site));
+    sitesCol.appendChild(b);
+    SITES.push(site);
+  });
+});
 
-    document.getElementById('modeToggle').addEventListener('click', (e) => {
-        isGlobalMode = !isGlobalMode;
-        document.body.classList.toggle('global-mode', isGlobalMode);
-        e.target.innerText = isGlobalMode ? '当前：全局模式 (Global)' : '当前：规则模式 (Rule)';
-        e.target.style.background = isGlobalMode ? 'var(--macaron-yellow)' : '';
-        e.target.style.color = isGlobalMode ? '#2d3748' : '';
-        drawAllLines();
+const NOW = {};
+document.querySelectorAll('[data-now]').forEach(el => { NOW[el.dataset.now] = {el, b:el.querySelector('b')}; });
+
+/* ====================== 状态更新 ====================== */
+function paintSite(s, changed, fx){
+  const r = s.route, label = exitLabel(r);
+  s.el.style.setProperty('--ec', r.color);
+  setText(s.exitTag, label, fx);
+  s.laneExit.textContent = label;
+  if (changed) {
+    let stops = r.hops.map(h => ({e:G[h.g].emoji, c:COL[h.g], t:G[h.g].full}));
+    if (s.entry === 'reject') stops = [{e:'⛔', c:COL.reject, t:'阻断连接'}];
+    s.stops.innerHTML = stops.map(st => `<b class="stop" style="--c:${st.c}" title="${esc(st.t)}">${st.e}</b>`).join('');
+    const cols = [COL[s.entry]];
+    r.hops.forEach(h => { if (cols[cols.length-1] !== COL[h.g]) cols.push(COL[h.g]); });
+    if (cols[cols.length-1] !== r.color) cols.push(r.color);
+    if (cols.length === 1) cols.push(cols[0]);
+    s.wire.style.background = s.entry === 'reject' ? '' : `linear-gradient(90deg,${cols.join(',')})`;
+  }
+  s.el.setAttribute('aria-label', `${s.name}：${routeText(s)}`);
+}
+function routeText(s){
+  const r = s.route;
+  if (r.exit === 'direct') return '不走代理';
+  if (r.exit === 'reject') return '阻断连接';
+  return `经 ${r.hops.map(h => G[h.g].full).join('、')}，从 ${r.node} 出去`;
+}
+
+function paintExits(fx){
+  const rp = routeOf('gp');
+  const counts = {proxy:0, res:0, direct:0, reject:0};
+  SITES.forEach(s => counts[s.route.exit]++);
+  const resNode = G.res.options[state.res].label, resOn = state.pure === 1;
+  const spec = {
+    proxy:{c:COL[rp.last], icon:flagOf(rp.node) || '🛰️', title:rp.node, cap: rp.last === 'bak' ? '代理出口，经 ⛵️ 备用' : '代理出口', idle:false},
+    res:{c:COL.res, icon:flagOf(resNode) || '🏠', title:resNode, cap: resOn ? '住宅 IP 出口' : '纯净保护关闭时不使用', idle:!resOn},
+    direct:{c:COL.direct, icon:'📶', title:'不走代理', cap:'直接连接，用你自己的网络', idle:false},
+    reject:{c:COL.reject, icon:'⛔', title:'阻断连接', cap:'请求在本地就被拦下', idle:false},
+  };
+  for (const k in spec) {
+    const e = EX[k], sp = spec[k];
+    e.el.style.setProperty('--c', sp.c);
+    e.icon.textContent = sp.icon;
+    setText(e.title, sp.title, fx);
+    e.cap.textContent = sp.cap;
+    e.count.textContent = counts[k] ? `${counts[k]} 个网站` : '';
+    e.el.classList.toggle('idle', sp.idle);
+    if (fx && e.n !== counts[k] && !reduce) { e.el.classList.remove('ping'); void e.el.offsetWidth; e.el.classList.add('ping'); }
+    e.n = counts[k];
+  }
+}
+
+function paintNow(fx){
+  ['pure','gp','direct','reject'].forEach(k => {
+    const r = routeOf(k);
+    NOW[k].el.style.setProperty('--c', r.color);
+    setText(NOW[k].b, exitLabel(r), fx);
+  });
+}
+
+function update(fx){
+  const prev = new Map(SITES.map(s => [s.id, s.key]));
+  SITES.forEach(s => {
+    s.route = routeOf(s.entry);
+    s.chain = ['s:' + s.id, ...s.route.hops.map(h => 'o:' + h.g)];
+    s.key = keyOf(s.route);
+  });
+  const changed = SITES.filter(s => prev.get(s.id) !== undefined && prev.get(s.id) !== s.key);
+  SITES.forEach(s => paintSite(s, prev.get(s.id) !== s.key, fx));
+  GROUPS.forEach(g => {
+    const st = ST[g.id];
+    st.chips.forEach((b, i) => b.setAttribute('aria-checked', String(i === state[g.id])));
+    const n = SITES.filter(s => s.route.hops.some(h => h.g === g.id)).length;
+    st.el.classList.toggle('idle', n === 0);
+    setText(st.badge, n ? `${n} 个网站` : '暂未使用', fx);
+  });
+  paintExits(fx);
+  paintNow(fx);
+  $('#reset').disabled = GROUPS.every(g => state[g.id] === DEFAULTS[g.id]);
+  return changed;
+}
+
+function choose(g, i){
+  if (state[g] === i) return;
+  state[g] = i;
+  const changed = update(true);
+  relayout(true);
+  afterChange(changed);
+  const n = changed.length;
+  toast(n ? `${G[g].full} 已切换到 ${G[g].options[i].label}，${n} 个网站改道` : `${G[g].full} 已切换到 ${G[g].options[i].label}，目前没有网站经过这里`);
+}
+$('#reset').addEventListener('click', () => {
+  Object.assign(state, DEFAULTS);
+  const changed = update(true);
+  relayout(true);
+  afterChange(changed);
+  toast(changed.length ? `已恢复默认，${changed.length} 个网站改道` : '已恢复默认');
+});
+function afterChange(changed){
+  if (mode === 'graph') burst(changed);
+  else changed.forEach(s => { s.el.classList.remove('flash'); void s.el.offsetWidth; s.el.classList.add('flash'); });
+  refreshFocus();
+}
+
+/* ====================== 连线几何 ====================== */
+const LANE = {pure:0, gp:1, bak:2, res:3};
+function bez(a, b){
+  const dx = Math.max(36, (b[0] - a[0]) * .5);
+  return `M${a[0]},${a[1]} C${a[0]+dx},${a[1]} ${b[0]-dx},${b[1]} ${b[0]},${b[1]}`;
+}
+function loop(a, b, gx){
+  const dy = b[1] - a[1], dir = dy >= 0 ? 1 : -1;
+  const r = Math.max(1, Math.min(16, Math.abs(dy) / 2, gx - Math.max(a[0], b[0]) - 1));
+  return `M${a[0]},${a[1]} H${gx-r} Q${gx},${a[1]} ${gx},${a[1]+dir*r} V${b[1]-dir*r} Q${gx},${b[1]} ${gx-r},${b[1]} H${b[0]}`;
+}
+function sample(d, N){
+  probe.setAttribute('d', d);
+  const L = probe.getTotalLength(), pts = [];
+  for (let i = 0; i < N; i++) { const p = probe.getPointAtLength(L * i / (N - 1)); pts.push([p.x, p.y]); }
+  return pts;
+}
+function resample(pts, N){
+  if (pts.length === N) return pts.map(p => [p[0], p[1]]);
+  const out = [];
+  for (let i = 0; i < N; i++) {
+    const f = i * (pts.length - 1) / (N - 1), j = Math.floor(f), t = f - j, a = pts[j], b = pts[Math.min(j + 1, pts.length - 1)];
+    out.push([a[0] + (b[0]-a[0])*t, a[1] + (b[1]-a[1])*t]);
+  }
+  return out;
+}
+
+const exitTop = {};
+function placeExits(){
+  const col = rel(exCol), head = exCol.querySelector('.col-h');
+  const minTop = head.offsetTop + head.offsetHeight + 10;
+  const feeder = state.gp === 2 ? 'bak' : 'gp';
+  const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const want = {
+    proxy: rel(ST[feeder].el).cy,
+    res: rel(ST.res.el).cy,
+    direct: avg(SITES.filter(s => s.entry === 'direct').map(s => rel(s.star).cy)),
+    reject: avg(SITES.filter(s => s.entry === 'reject').map(s => rel(s.star).cy)),
+  };
+  const items = Object.keys(want).map(k => ({k, y:want[k], h:EX[k].el.offsetHeight || 60})).sort((a, b) => a.y - b.y);
+  let prevBottom = minTop - 22;
+  items.forEach(it => { const top = Math.max(it.y - col.t - it.h/2, prevBottom + 22); exitTop[it.k] = top; prevBottom = top + it.h; });
+  items.forEach(it => { EX[it.k].el.style.top = exitTop[it.k] + 'px'; });
+}
+function exitRect(k){
+  const col = rel(exCol), el = EX[k].el, t = col.t + (exitTop[k] || 0), h = el.offsetHeight;
+  return {l:col.l, r:col.l + el.offsetWidth, t, b:t + h, cy:t + h/2};
+}
+
+function computeTargets(){
+  const T = {};
+  const card = {}; GROUPS.forEach(g => { card[g.id] = rel(ST[g.id].el); });
+  if (mode === 'graph') {
+    const into = {gp:[], pure:[]};
+    SITES.forEach(s => { if (into[s.entry]) into[s.entry].push(s); });
+    SITES.forEach(s => {
+      const a = rel(s.star), p0 = [a.cx, a.cy]; let p3;
+      if (into[s.entry]) {
+        const c = card[s.entry], list = into[s.entry], i = list.indexOf(s), n = list.length;
+        const top = c.t + 30, bot = c.b - 30;
+        p3 = [c.l, n > 1 ? top + (bot - top) * i / (n - 1) : c.cy];
+      } else { const e = exitRect(s.entry); p3 = [e.l, e.cy]; }
+      T['s:' + s.id] = {d:bez(p0, p3), N:60, c1:COL[s.entry], c2:COL[s.entry], kind:'site'};
     });
+    const gx = Math.max(...GROUPS.map(g => card[g.id].r)) + 26;
+    GROUPS.forEach(g => {
+      if (!isActive(g.id)) return;
+      const o = g.options[state[g.id]], chip = rel(ST[g.id].chips[state[g.id]]), c = card[g.id], p0 = [c.r, chip.cy];
+      if (o.to) T['o:' + g.id] = {d:loop(p0, [card[o.to].r, rel(ST[o.to].head).cy], gx + LANE[g.id]*14), N:150, c1:COL[g.id], c2:COL[o.to], kind:'out'};
+      else { const e = exitRect(g.id === 'res' ? 'res' : 'proxy'); T['o:' + g.id] = {d:bez(p0, [e.l, e.cy]), N:90, c1:COL[g.id], c2:COL[g.id], kind:'out'}; }
+    });
+  } else {
+    const gx = Math.max(...GROUPS.map(g => card[g.id].r)) + 9;
+    GROUPS.forEach(g => {
+      if (!isActive(g.id)) return;
+      const o = g.options[state[g.id]]; if (!o.to) return;
+      const chip = rel(ST[g.id].chips[state[g.id]]), c = card[g.id];
+      T['o:' + g.id] = {d:loop([c.r, chip.cy], [card[o.to].r, rel(ST[o.to].head).cy], gx + LANE[g.id]*6), N:150, c1:COL[g.id], c2:COL[o.to], kind:'out'};
+    });
+  }
+  return T;
+}
 
-    function resolvePath(target, siteName) {
-        let path = [];
-        let current = target;
-        let safeCounter = 0;
-        
-        while (current && safeCounter < 10) {
-            path.push(current);
-            if (nodes[current]) break;
-            if (groups[current]) {
-                let next = groups[current].selected;
-                if (next === 'ISPChain') {
-                    path.push('Auto'); 
-                    current = 'ISPNodes'; 
-                } else {
-                    current = next;
-                }
-            } else {
-                current = null;
-            }
-            safeCounter++;
-        }
+/* ====================== 连线渲染与动画 ====================== */
+const segs = new Map();
+let tween = null, introRunning = false, sparksOn = false;
 
-        if (['ChatGPT（OpenAI）', 'Google AI Studio / Gemini', 'Claude'].includes(siteName)) {
-            let finalNode = path[path.length - 1];
-            if (finalNode === 'HK' || finalNode === 'ISP_HK') {
-                path[path.length - 1] = 'BLOCK_AI'; 
-            }
-        }
+function svgEl(tag, cls, parent){ const e = document.createElementNS(NS, tag); if (cls) e.setAttribute('class', cls); parent.appendChild(e); return e; }
+function mkSeg(id){
+  const gid = 'lg-' + id.replace(/[^a-z0-9]/gi, '-');
+  const grad = svgEl('linearGradient', '', defs);
+  grad.id = gid; grad.setAttribute('gradientUnits', 'userSpaceOnUse');
+  const s0 = svgEl('stop', '', grad), s1 = svgEl('stop', '', grad); s0.setAttribute('offset', '0'); s1.setAttribute('offset', '1');
+  const glow = svgEl('path', 'w-glow', gGlow), core = svgEl('path', 'w-core', gCore), flow = svgEl('path', 'w-flow', gFlow);
+  glow.setAttribute('stroke', `url(#${gid})`); core.setAttribute('stroke', `url(#${gid})`);
+  const pa = svgEl('circle', 'port', portsSvg), pb = svgEl('circle', 'port', portsSvg);
+  pa.setAttribute('r', '3.2'); pb.setAttribute('r', '3.6');
+  return {id, grad, s0, s1, glow, core, flow, pa, pb, pts:null, from:null, to:null, len:0, cum:[0], delay:0, dying:false};
+}
+function dropSeg(s){ [s.grad, s.glow, s.core, s.flow, s.pa, s.pb].forEach(e => e.remove()); segs.delete(s.id); }
+function setPts(s, pts){
+  s.pts = pts;
+  let d = 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1);
+  const cum = [0]; let L = 0;
+  for (let i = 1; i < pts.length; i++) {
+    d += 'L' + pts[i][0].toFixed(1) + ',' + pts[i][1].toFixed(1);
+    L += Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]); cum.push(L);
+  }
+  s.cum = cum; s.len = L;
+  s.glow.setAttribute('d', d); s.core.setAttribute('d', d); s.flow.setAttribute('d', d);
+  const a = pts[0], b = pts[pts.length - 1];
+  s.grad.setAttribute('x1', a[0]); s.grad.setAttribute('y1', a[1]); s.grad.setAttribute('x2', b[0] + .01); s.grad.setAttribute('y2', b[1] + .01);
+  s.pa.setAttribute('cx', a[0]); s.pa.setAttribute('cy', a[1]);
+  s.pb.setAttribute('cx', b[0]); s.pb.setAttribute('cy', b[1]);
+  const vis = L > 2 ? '1' : '0';
+  s.pa.style.opacity = s.kind === 'out' ? vis : '0';
+  s.pb.style.opacity = vis;
+}
+function paintSeg(s){
+  s.s0.setAttribute('stop-color', s.c1); s.s1.setAttribute('stop-color', s.c2);
+  s.pa.setAttribute('fill', s.c1); s.pb.setAttribute('fill', s.c2);
+}
 
-        return path;
+function applyTargets(T, animate, intro){
+  let si = 0, oi = 0;
+  for (const id in T) {
+    const t = T[id], target = sample(t.d, t.N);
+    let s = segs.get(id); const fresh = !s;
+    if (fresh) { s = mkSeg(id); segs.set(id, s); }
+    s.kind = t.kind; s.c1 = t.c1; s.c2 = t.c2; s.dying = false; paintSeg(s);
+    s.from = (fresh || !s.pts) ? target.map(() => [target[0][0], target[0][1]]) : resample(s.pts, t.N);
+    s.to = target;
+    s.delay = intro ? (t.kind === 'site' ? (si++) * 24 : 560 + (oi++) * 160) : 0;
+    if (fresh && !animate) setPts(s, target);
+    else if (fresh) setPts(s, s.from);
+  }
+  for (const [id, s] of segs) {
+    if (T[id]) continue;
+    if (!animate || !s.pts) { dropSeg(s); continue; }
+    s.dying = true; s.delay = 0; s.from = s.pts.map(p => [p[0], p[1]]); s.to = s.pts.map(() => [s.pts[0][0], s.pts[0][1]]);
+  }
+  if (!animate || reduce) {
+    for (const s of [...segs.values()]) { if (s.dying) dropSeg(s); else setPts(s, s.to); }
+    tween = null; introRunning = false; sparksOn = mode === 'graph' && !reduce;
+  } else {
+    tween = {t0:performance.now(), dur:intro ? 1000 : 700};
+    if (intro) { introRunning = true; sparksOn = false; }
+  }
+}
+function stepTween(now){
+  if (!tween) return;
+  let done = true;
+  for (const s of [...segs.values()]) {
+    const p = clamp((now - tween.t0 - s.delay) / tween.dur, 0, 1);
+    if (p < 1) done = false;
+    const e = ease(p), pts = s.from.map((a, i) => [a[0] + (s.to[i][0] - a[0]) * e, a[1] + (s.to[i][1] - a[1]) * e]);
+    setPts(s, pts);
+    if (p >= 1 && s.dying) dropSeg(s);
+  }
+  if (done) {
+    tween = null;
+    if (introRunning) { introRunning = false; sparksOn = mode === 'graph' && !reduce; seedSparks(); }
+  }
+}
+
+let W = 0, H = 0, DPR = 1;
+function sizeLayers(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (w === W && h === H) return;
+  W = w; H = h;
+  [wires, portsSvg].forEach(s => { s.setAttribute('width', w); s.setAttribute('height', h); s.style.width = w + 'px'; s.style.height = h + 'px'; });
+  DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+  cvs.width = Math.round(w * DPR); cvs.height = Math.round(h * DPR);
+  cvs.style.width = w + 'px'; cvs.style.height = h + 'px';
+}
+function relayout(animate, intro){
+  sizeLayers();
+  if (mode === 'graph') placeExits();
+  applyTargets(computeTargets(), animate, intro);
+  refreshFocus();
+}
+
+/* ====================== 光点粒子 ====================== */
+const sprites = {};
+function sprite(c){
+  if (sprites[c]) return sprites[c];
+  const s = document.createElement('canvas'); s.width = s.height = 64;
+  const x = s.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.16, hexA(c, 1)); g.addColorStop(.42, hexA(c, .32)); g.addColorStop(1, hexA(c, 0));
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  return (sprites[c] = s);
+}
+let sparks = [];
+function seedSparks(){
+  sparks = [];
+  SITES.forEach((s, i) => {
+    for (let k = 0; k < 2; k++) sparks.push({site:s, f:-(Math.random()*.7) - k*.5 - (i%5)*.03, v:95 + Math.random()*40, size:18, burst:false});
+  });
+}
+function burst(list){
+  if (reduce) return;
+  list.forEach(s => { for (let k = 0; k < 3; k++) sparks.push({site:s, f:-k*.035, v:380, size:22, burst:true}); });
+}
+function chainInfo(chain){
+  const parts = []; let total = 0, prev = null;
+  for (const id of chain) {
+    const s = segs.get(id); if (!s || !s.pts) continue;
+    if (prev) { const a = prev.pts[prev.pts.length - 1], b = s.pts[0], g = Math.hypot(b[0]-a[0], b[1]-a[1]); parts.push({gap:true, a, b, len:g}); total += g; }
+    parts.push({gap:false, s, len:s.len}); total += s.len; prev = s;
+  }
+  return {parts, total};
+}
+function pointOn(info, d){
+  let acc = 0;
+  for (const p of info.parts) {
+    if (d <= acc + p.len || p === info.parts[info.parts.length - 1]) {
+      const t = p.len ? clamp((d - acc) / p.len, 0, 1) : 0;
+      if (p.gap) return {x:p.a[0] + (p.b[0]-p.a[0])*t, y:p.a[1] + (p.b[1]-p.a[1])*t, c:null, hidden:true};
+      const s = p.s, cum = s.cum, target = t * s.len;
+      let lo = 0, hi = cum.length - 1;
+      while (lo < hi - 1) { const m = (lo + hi) >> 1; if (cum[m] < target) lo = m; else hi = m; }
+      const span = cum[hi] - cum[lo] || 1, u = (target - cum[lo]) / span, A = s.pts[lo], B = s.pts[hi];
+      return {x:A[0] + (B[0]-A[0])*u, y:A[1] + (B[1]-A[1])*u, c: t < .5 ? s.c1 : s.c2, hidden:false};
     }
-
-    let allPaths = [];
-
-    function drawAllLines() {
-        svgLines.innerHTML = '';
-        allPaths = [];
-
-        Object.keys(nodes).forEach(key => {
-            if (key.startsWith('ISP_')) {
-                const el = document.getElementById(`node-${key}`);
-                if (el) el.style.display = (groups['ISPNodes'].selected === key) ? 'block' : 'none';
-            }
-        });
-
-        sites.forEach((site, index) => {
-            const startEl = document.getElementById(`site-${index}`);
-            let initialTarget = isGlobalMode ? 'GLOBAL' : site.rule;
-            const route = resolvePath(initialTarget, site.name);
-            const textRouteArray = [site.name, ...route.map(r => getFullName(r))];
-            
-            let prevEl = startEl;
-            for (let i = 0; i < route.length; i++) {
-                let targetId = groups[route[i]] && !groups[route[i]].hidden ? `group-${route[i]}` : `node-${route[i]}`;
-                let targetEl = document.getElementById(targetId);
-                
-                if (targetEl && prevEl !== targetEl) {
-                    const finalNode = route[route.length-1];
-                    const color = (finalNode === 'REJECT' || finalNode === 'BLOCK_AI') ? 'var(--reject-color)' : 
-                                  finalNode === 'DIRECT' ? 'var(--direct-color)' : 'var(--line-color)';
-                    
-                    const pathData = drawBezier(prevEl, targetEl);
-                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    path.setAttribute('d', pathData);
-                    path.setAttribute('stroke', color);
-                    path.setAttribute('stroke-width', 'var(--line-width)');
-                    
-                    path.addEventListener('mouseenter', () => {
-                        path.classList.add('hover-line');
-                        tooltip.style.opacity = '1';
-                        tooltip.innerHTML = textRouteArray.join(' ➔ ');
-                    });
-                    path.addEventListener('mouseleave', () => {
-                        path.classList.remove('hover-line');
-                        tooltip.style.opacity = '0';
-                    });
-                    path.addEventListener('mousemove', (e) => {
-                        tooltip.style.left = (e.clientX + 15) + 'px';
-                        tooltip.style.top = (e.clientY + 15) + 'px';
-                    });
-                    path.addEventListener('click', () => showInfoBox(site.name, textRouteArray));
-
-                    svgLines.appendChild(path);
-                    allPaths.push({ dom: path, siteIndex: index });
-                    prevEl = targetEl;
-                }
-            }
-        });
+    acc += p.len;
+  }
+  return null;
+}
+let stageVisible = true, last = performance.now(), cleared = false;
+function drawSparks(dt){
+  if (!sparksOn || !stageVisible) { if (!cleared) { ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0, 0, cvs.width, cvs.height); cleared = true; } return; }
+  cleared = false;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter';
+  const infos = new Map();
+  const getInfo = s => { let i = infos.get(s.id); if (!i) { i = chainInfo(s.chain); infos.set(s.id, i); } return i; };
+  for (let n = sparks.length - 1; n >= 0; n--) {
+    const p = sparks[n], info = getInfo(p.site);
+    if (!info.total) continue;
+    p.f += p.v * dt / info.total;
+    if (p.f > 1) { if (p.burst) { sparks.splice(n, 1); continue; } p.f -= 1 + Math.random()*.2; }
+    if (p.f < 0) continue;
+    const d = p.f * info.total, head = pointOn(info, d); if (!head) continue;
+    let alpha = clamp(Math.min(d / 50, (info.total - d) / 50), 0, 1);
+    let size = p.size;
+    if (p.site.entry === 'reject' && p.f > .9) { size *= 1 + (p.f - .9) * 16; alpha *= 1 - (p.f - .9) * 9; }
+    if (focusSet && !focusSet.has(p.site.id)) alpha *= .1;
+    if (head.hidden) alpha *= .55;
+    if (p.burst) alpha = Math.min(1, alpha * 1.4);
+    if (alpha <= .01) continue;
+    const c = head.c || p.site.route.color;
+    const sp = sprite(c);
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(sp, head.x - size/2, head.y - size/2, size, size);
+    for (let k = 1; k <= 4; k++) {
+      const q = pointOn(info, d - k * (p.burst ? 9 : 6)); if (!q) break;
+      const sz = size * (1 - k * .17);
+      ctx.globalAlpha = alpha * (.5 - k * .1) * (q.hidden ? .55 : 1);
+      ctx.drawImage(sprite(q.c || c), q.x - sz/2, q.y - sz/2, sz, sz);
     }
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+function frame(now){
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  stepTween(now);
+  if (mode === 'graph') drawSparks(dt);
+  requestAnimationFrame(frame);
+}
+if ('IntersectionObserver' in window) new IntersectionObserver(es => { stageVisible = es[0].isIntersecting; }).observe(stage);
 
-    function drawBezier(el1, el2) {
-        const r1 = el1.getBoundingClientRect();
-        const r2 = el2.getBoundingClientRect();
-        const svgR = svgLines.getBoundingClientRect();
-        const x1 = r1.right - svgR.left, y1 = r1.top + r1.height / 2 - svgR.top;
-        const x2 = r2.left - svgR.left, y2 = r2.top + r2.height / 2 - svgR.top;
-        const offset = Math.abs(x2 - x1) * 0.4;
-        return `M ${x1} ${y1} C ${x1 + offset} ${y1}, ${x2 - offset} ${y2}, ${x2} ${y2}`;
-    }
+/* ====================== 聚焦与路线条 ====================== */
+let focus = null, pinned = null, focusSet = null, toastMsg = null, toastTimer = 0;
+function focusSites(f){
+  if (!f) return null;
+  if (f.kind === 'site') return [f.site];
+  if (f.kind === 'group') return SITES.filter(s => s.route.hops.some(h => h.g === f.g));
+  if (f.kind === 'exit') return SITES.filter(s => s.route.exit === f.x);
+  return null;
+}
+function setFocus(f){ focus = f; if (f && toastMsg) { toastMsg = null; clearTimeout(toastTimer); } refreshFocus(); }
+function togglePin(site){
+  if (pinned === site) { pinned = null; setFocus(null); }
+  else { pinned = site; setFocus({kind:'site', site}); }
+}
+function refreshFocus(){
+  const list = focusSites(focus);
+  focusSet = list ? new Set(list.map(s => s.id)) : null;
+  stage.classList.toggle('focusing', !!focusSet);
+  SITES.forEach(s => s.el.classList.toggle('hot', !!focusSet && focusSet.has(s.id)));
+  const hot = new Set();
+  if (focusSet) SITES.forEach(s => { if (focusSet.has(s.id)) s.chain.forEach(id => hot.add(id)); });
+  segs.forEach((sg, id) => {
+    const h = !!focusSet && hot.has(id), dm = !!focusSet && !h;
+    [sg.glow, sg.core, sg.flow].forEach(p => { p.classList.toggle('hot', h); p.classList.toggle('dim', dm); });
+    sg.pa.classList.toggle('dim', dm); sg.pb.classList.toggle('dim', dm);
+  });
+  GROUPS.forEach(g => ST[g.id].el.classList.toggle('lit', !!list && list.some(s => s.route.hops.some(h => h.g === g.id))));
+  Object.keys(EX).forEach(k => EX[k].el.classList.toggle('lit', !!list && list.some(s => s.route.exit === k)));
+  renderRoutebar();
+}
+function chainHTML(s){
+  const r = s.route, nodes = [{t:`${s.icon} ${s.name}`, c:COL[s.entry]}];
+  r.hops.forEach((h, idx) => {
+    const isLast = idx === r.hops.length - 1;
+    nodes.push({t:G[h.g].full, c:COL[h.g], note: isLast ? '' : h.o.label});
+  });
+  nodes.push({t:r.node, c:r.color, end:true});
+  let html = '';
+  nodes.forEach((n, i) => {
+    if (i) html += `<span class="rb-link" style="--a:${nodes[i-1].c};--b:${n.c}"></span>`;
+    html += `<span class="rb-node${n.end ? ' end' : ''}" style="--c:${n.c}">${esc(n.t)}${n.note ? `<small>${esc(n.note)}</small>` : ''}</span>`;
+  });
+  return html;
+}
+function renderRoutebar(){
+  let html = '', closable = !!pinned;
+  if (toastMsg) html = `<p class="rb-idle">${esc(toastMsg)}</p>`;
+  else if (!focus) html = `<p class="rb-idle"><span class="only-mouse">把鼠标移到网站上就能看到它的完整路线，点一下可以固定</span><span class="only-touch">点一下任意网站，看看它的完整路线</span></p>`;
+  else if (focus.kind === 'site') {
+    const s = focus.site;
+    html = `<p class="rb-line"><b>${esc(s.name)}</b>　${esc(s.sub)}</p><div class="rb-chain">${chainHTML(s)}</div>`;
+  } else {
+    const list = focusSites(focus);
+    const head = focus.kind === 'group'
+      ? (list.length ? `共 <b>${list.length}</b> 个网站经过 <b>${esc(G[focus.g].full)}</b>` : `目前没有网站经过 <b>${esc(G[focus.g].full)}</b>`)
+      : `共 <b>${list.length}</b> 个网站从 <b>${esc(EX[focus.x].title._target || '')}</b> 出去`;
+    html = `<p class="rb-line">${head}</p>${list.length ? `<p class="rb-list">${list.map(s => esc(s.name)).join('、')}</p>` : ''}`;
+  }
+  rbBody.innerHTML = html;
+  let btn = rb.querySelector('.rb-close');
+  if (closable && !toastMsg) {
+    if (!btn) { btn = document.createElement('button'); btn.type = 'button'; btn.className = 'rb-close'; btn.setAttribute('aria-label', '取消选中'); btn.textContent = '×'; btn.addEventListener('click', () => { pinned = null; setFocus(null); }); rb.appendChild(btn); }
+  } else if (btn) btn.remove();
+}
+function toast(msg){
+  toastMsg = msg; renderRoutebar();
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastMsg = null; renderRoutebar(); }, 2600);
+}
+document.addEventListener('click', e => {
+  if (!pinned) return;
+  if (e.target.closest('.site, .station, .exit, .routebar')) return;
+  pinned = null; setFocus(null);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && (pinned || focus)) { pinned = null; setFocus(null); } });
 
-    function highlightPath(index) {
-        document.querySelectorAll('.card').forEach(c => c.classList.add('dimmed'));
-        allPaths.forEach(p => p.dom.style.opacity = '0.05');
-        
-        const relatedPaths = allPaths.filter(p => p.siteIndex === index);
-        relatedPaths.forEach(p => {
-            p.dom.classList.add('highlight-line');
-            p.dom.style.opacity = '1';
-        });
+/* ====================== 星空背景 ====================== */
+function drawSky(){
+  const c = $('#sky'), d = Math.min(window.devicePixelRatio || 1, 2), w = innerWidth, h = Math.max(innerHeight, screen.height || 0);
+  c.width = Math.round(w * d); c.height = Math.round(h * d);
+  const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); x.clearRect(0, 0, w, h);
+  let seed = 20240917; const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  const n = Math.round(w * h / 4600), tints = ['#9cc8ff', '#c9b6ff', '#a6f0d2', '#ffe1a8'];
+  for (let i = 0; i < n; i++) {
+    const r = Math.pow(rnd(), 3) * 1.25 + .3;
+    x.globalAlpha = .18 + rnd() * .6;
+    x.fillStyle = rnd() < .14 ? tints[(rnd() * tints.length) | 0] : '#e9ecff';
+    x.beginPath(); x.arc(rnd() * w, rnd() * h, r, 0, 6.2832); x.fill();
+  }
+}
 
-        const site = sites[index];
-        document.getElementById(`site-${index}`).classList.remove('dimmed');
-        
-        let initialTarget = isGlobalMode ? 'GLOBAL' : site.rule;
-        
-        const route = resolvePath(initialTarget, site.name);
-        route.forEach(r => {
-            let elId = groups[r] && !groups[r].hidden ? `group-${r}` : `node-${r}`;
-            let el = document.getElementById(elId);
-            if(el) el.classList.remove('dimmed');
-        });
-    }
+/* ====================== 启动 ====================== */
+function setMode(){
+  const m = mqGraph.matches ? 'graph' : 'lanes';
+  if (m === mode && segs.size) return;
+  mode = m;
+  for (const s of [...segs.values()]) dropSeg(s);
+  W = H = 0;
+  sparksOn = false;
+  if (m === 'graph' && !reduce) seedSparks();
+  relayout(!reduce, !reduce);
+}
+let rq = 0;
+function queueRelayout(){
+  cancelAnimationFrame(rq);
+  rq = requestAnimationFrame(() => { W = H = 0; relayout(!!tween); });
+}
+mqGraph.addEventListener ? mqGraph.addEventListener('change', setMode) : mqGraph.addListener(setMode);
+const onReduce = () => { reduce = mqReduce.matches; if (reduce) { sparksOn = false; } else if (mode === 'graph') { sparksOn = true; seedSparks(); } };
+mqReduce.addEventListener ? mqReduce.addEventListener('change', onReduce) : mqReduce.addListener(onReduce);
+let skyT = 0;
+addEventListener('resize', () => { clearTimeout(skyT); skyT = setTimeout(drawSky, 180); });
 
-    function resetHighlight() {
-        document.querySelectorAll('.card').forEach(c => c.classList.remove('dimmed'));
-        allPaths.forEach(p => {
-            p.dom.classList.remove('highlight-line');
-            p.dom.style.opacity = '1';
-        });
-    }
-
-    function showInfoBox(title, routeArray) {
-        infoTitle.innerText = title;
-        infoRoute.innerHTML = '';
-        
-        routeArray.forEach((step, idx) => {
-            const stepDiv = document.createElement('div');
-            stepDiv.className = 'route-step';
-            let icon = '🌐';
-            if (idx === 0) icon = '🎯'; 
-            else if (idx === routeArray.length - 1) icon = '🚀'; 
-            
-            stepDiv.innerHTML = `<span>${icon}</span> <span>${step}</span>`;
-            infoRoute.appendChild(stepDiv);
-            
-            if (idx < routeArray.length - 1) {
-                const arrow = document.createElement('div');
-                arrow.className = 'route-arrow';
-                arrow.innerText = '↓';
-                infoRoute.appendChild(arrow);
-            }
-        });
-        
-        infoBox.style.display = 'flex';
-    }
-
-    window.closeInfoBox = () => infoBox.style.display = 'none';
-
-    window.onload = () => {
-        initUI();
-        setTimeout(drawAllLines, 100);
-    };
-    window.onresize = drawAllLines;
+drawSky();
+update(false);
+renderRoutebar();
+const start = () => {
+  if (start.done) return; start.done = true;
+  seedSparks();
+  relayout(!reduce, !reduce);
+  if ('ResizeObserver' in window) { const ro = new ResizeObserver(queueRelayout); ro.observe(stage); ro.observe(stCol); ro.observe(sitesCol); }
+  else addEventListener('resize', queueRelayout);
+  requestAnimationFrame(t => { last = t; frame(t); });
+};
+(document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 900))]) : Promise.resolve()).then(start);
+if (document.fonts) document.fonts.addEventListener && document.fonts.addEventListener('loadingdone', queueRelayout);
+})();
 </script>
-
 </body>
 </html>
